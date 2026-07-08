@@ -1,0 +1,83 @@
+{
+  "name": "Brecha Digital Brasil",
+  "dataColors": [
+    "#0F766E",
+    "#D97706",
+    "#527EA8",
+    "#9C5BB0",
+    "#C0564B",
+    "#7C8894",
+    "#C9A83C",
+    "#417B5A"
+  ],
+  "good": "#0F766E",
+  "neutral": "#C9A83C",
+  "bad": "#C0564B",
+  "maximum": "#0B4F4A",
+  "center": "#6FB5AE",
+  "minimum": "#E0F0EE",
+  "null": "#E4E7EA",
+  "foreground": "#242321",
+  "background": "#FFFFFF",
+  "tableAccent": "#0F766E",
+  "textClasses": {
+    "title": {
+      "fontFace": "Segoe UI Semibold",
+      "fontSize": 13,
+      "color": "#242321"
+    },
+    "header": {
+      "fontFace": "Segoe UI Semibold",
+      "fontSize": 11,
+      "color": "#242321"
+    },
+    "label": {
+      "fontFace": "Segoe UI",
+      "fontSize": 10,
+      "color": "#5F5D5A"
+    },
+    "callout": {
+      "fontFace": "Segoe UI Semibold",
+      "fontSize": 28,
+      "color": "#0F766E"
+    }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "title": [
+          {
+            "fontFamily": "Segoe UI Semibold",
+            "fontSize": 12,
+            "fontColor": "#242321",
+            "alignment": "left"
+          }
+        ],
+        "background": [
+          {
+            "show": true,
+            "color": { "solid": { "color": "#FFFFFF" } },
+            "transparency": 0
+          }
+        ],
+        "border": [
+          {
+            "show": true,
+            "color": { "solid": { "color": "#E4E7EA" } },
+            "radius": 8
+          }
+        ]
+      }
+    },
+    "page": {
+      "*": {
+        "background": [
+          {
+            "color": { "solid": { "color": "#F5F7F6" } },
+            "transparency": 0
+          }
+        ]
+      }
+    }
+  }
+}

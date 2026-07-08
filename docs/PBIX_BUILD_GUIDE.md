@@ -99,7 +99,7 @@ Se importar dados reais da API depois, os valores urbano/rural deixam de ser off
 
 ## Etapa 6 — Finalizar
 
-1. Tema: Exibição → Temas (escolha um e mantenha consistência de cores por região nas 4 páginas)
+1. Tema: Exibição → Temas → Procurar temas → importar `theme/brecha_digital_theme.json` (cards com borda arredondada, paleta teal/âmbar, fundo de página cinza-claro). Depois aplique as medidas de `dax/insight_measures.md` (título dinâmico, narrativa automática, cores condicionais)
 2. Salvar como `digital_divide_brasil.pbix` na raiz do projeto
 3. Exportar screenshots das 4 páginas para `docs/img/` e referenciá-los no README (repos de Power BI sem imagem não convencem recrutador)
 4. Opcional: publicar no Power BI Service e incluir link "ao vivo" no README
