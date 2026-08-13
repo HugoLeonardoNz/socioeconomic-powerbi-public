@@ -45,6 +45,7 @@ BG_RAIL = "#EDE8DE"    # rail lateral
 BG_CARD = "#FFFFFF"    # superficie dos paineis
 BORDER = "#E0D9CC"     # fio de contorno
 GRID = "#EDE8DE"       # linhas de grade
+BG_ALT = "#FAF7F1"     # faixa alternada das tabelas
 
 INK = "#1B1D21"        # tinta primaria
 INK_MUT = "#5B616B"    # tinta secundaria
@@ -223,10 +224,11 @@ def sort_by_column(entity: str, prop: str, direction: str = "Ascending") -> dict
 # Chrome dos paineis — quadrado, fio fino, titulo em serifa
 # ---------------------------------------------------------------------------
 
-def panel(title: str | None = None, subtitle: str | None = None, framed: bool = True) -> dict:
+def panel(title: str | None = None, subtitle: str | None = None, framed: bool = True,
+          centro: bool = False) -> dict:
     c: dict = {
         "background": obj(show=lit(framed), color=solid(BG_CARD), transparency=lit(0)),
-        "border": obj(show=lit(framed), color=solid(BORDER), radius=lit(2)),
+        "border": obj(show=lit(framed), color=solid(BORDER), radius=lit(14)),
         "dropShadow": obj(show=lit(False)),
         "visualHeader": obj(show=lit(False)),
     }
@@ -235,12 +237,13 @@ def panel(title: str | None = None, subtitle: str | None = None, framed: bool = 
             show=lit(True), text=lit(title),
             fontColor=solid(INK), background=solid(BG_CARD),
             fontFamily=lit(FONT_TITLE), fontSize=lit(16),
-            alignment=lit("left"), titleWrap=lit(False),
+            alignment=lit("center" if centro else "left"), titleWrap=lit(False),
         )
         c["subTitle"] = obj(
             show=lit(bool(subtitle)), text=lit(subtitle or ""),
             fontColor=solid(INK_DIM), fontFamily=lit(FONT),
-            fontSize=lit(11), alignment=lit("left"), titleWrap=lit(False),
+            fontSize=lit(11), alignment=lit("center" if centro else "left"),
+            titleWrap=lit(False),
         )
     else:
         c["title"] = obj(show=lit(False))
@@ -298,13 +301,17 @@ def data_labels(show: bool = True, color: str = INK_MUT, font: int = 11) -> list
 def table_style(total: bool = False, font: int = 12) -> dict:
     return {
         "columnHeaders": obj(
-            fontColor=solid(INK_DIM), backColor=solid(BG_CARD),
+            fontColor=solid(INK_MUT), backColor=solid(BG_ALT),
             fontFamily=lit(FONT_SEMI), fontSize=lit(11),
             outline=lit("BottomOnly"), wordWrap=lit(False),
+            alignment=lit("left"),
         ),
+        # Faixa alternada: em tabela de 27 linhas o olho perde a linha no meio
+        # do caminho. As duas cores sao proximas de proposito — a faixa guia,
+        # nao chama atencao.
         "values": obj(
             fontColorPrimary=solid(INK), backColorPrimary=solid(BG_CARD),
-            fontColorSecondary=solid(INK), backColorSecondary=solid(BG_CARD),
+            fontColorSecondary=solid(INK), backColorSecondary=solid(BG_ALT),
             fontFamily=lit(FONT), fontSize=lit(font),
             outline=lit("None"), urlIcon=lit(False),
         ),
@@ -312,7 +319,7 @@ def table_style(total: bool = False, font: int = 12) -> dict:
             gridVertical=lit(False), gridHorizontal=lit(True),
             gridHorizontalColor=solid(GRID), gridHorizontalWeight=lit(1),
             outlineColor=solid(BORDER), outlineWeight=lit(1),
-            rowPadding=lit(7), textSize=lit(font),
+            rowPadding=lit(9), textSize=lit(font),
         ),
         "total": obj(
             totals=lit(total), fontColor=solid(INK_MUT), backColor=solid(BG_CARD),
@@ -408,7 +415,7 @@ def stat(page: str, key: str, box, label: str, measure: str, color: str,
             "categoryLabels": obj(show=lit(False)),
             "wordWrap": obj(show=lit(False)),
         },
-        container=panel(label, note),
+        container=panel(label, note, centro=True),
     )
 
 
@@ -528,16 +535,16 @@ def slicer(page: str, key: str, box, label: str, entity: str, prop: str,
                 fontSize=lit(11), outline=lit("None"),
             ),
             "items": obj(
-                fontColor=solid(INK_MUT), background=solid(BG_CARD),
-                fontFamily=lit(FONT), fontSize=lit(11),
+                fontColor=solid(INK), background=solid(BG_ALT),
+                fontFamily=lit(FONT_SEMI), fontSize=lit(11),
                 outline=lit("Frame") if blocos else lit("None"),
                 outlineColor=solid(BORDER), outlineWeight=lit(1),
-                padding=lit(6),
+                padding=lit(8),
             ),
         },
         container={
             "background": obj(show=lit(True), color=solid(BG_CARD), transparency=lit(0)),
-            "border": obj(show=lit(True), color=solid(BORDER), radius=lit(2)),
+            "border": obj(show=lit(True), color=solid(BORDER), radius=lit(12)),
             "dropShadow": obj(show=lit(False)),
             "visualHeader": obj(show=lit(False)),
             "title": obj(show=lit(False)),
