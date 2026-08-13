@@ -116,27 +116,20 @@ def build_dim_periodo() -> pd.DataFrame:
     return df
 
 
-def build_dim_metrica() -> pd.DataFrame:
-    metricas = [
-        (1, "pct_domicilios_internet",        "%",    "Acesso",  1, "Proporção de domicílios com acesso à internet"),
-        (2, "pct_domicilios_internet_urbano",  "%",    "Acesso",  1, "Domicílios urbanos com acesso à internet"),
-        (3, "pct_domicilios_internet_rural",   "%",    "Acesso",  1, "Domicílios rurais com acesso à internet"),
-        (4, "renda_domiciliar_pc",             "R$",   "Renda",   1, "Renda domiciliar per capita média"),
-        (5, "populacao",                       "hab",  "Demo",    1, "População estimada"),
-    ]
-    return pd.DataFrame(metricas, columns=[
-        "id_metrica", "nome", "unidade", "categoria", "direcao_positiva", "descricao"
-    ])
-
-
 # ---------------------------------------------------------------------------
 # 2. Fetch IBGE data via SIDRA API
 # ---------------------------------------------------------------------------
 
+# O recorte urbano/rural (agregado 9174) foi REMOVIDO do pipeline.
+#
+# Ele existia aqui, mas o fallback offline só sabia produzi-lo aplicando um
+# deslocamento fixo sobre o total (+5pp urbano, -20pp rural). O resultado era um
+# gap de exatamente 25,0pp em todos os 27 estados, todos os anos — um número que
+# parece análise e não é: não distingue estado nenhum, porque foi construído
+# para não distinguir. Publicar isso como "gap digital por UF" seria inventar
+# achado. Melhor não ter o indicador do que ter um indicador falso.
 SIDRA_QUERIES = {
-    "pct_total":  "https://servicodados.ibge.gov.br/api/v3/agregados/9173/periodos/2019|2020|2021|2022|2023/variaveis/49109?localidades=N3[all]",
-    "pct_urbano": "https://servicodados.ibge.gov.br/api/v3/agregados/9174/periodos/2019|2020|2021|2022|2023/variaveis/49109?localidades=N3[all]&classificacao=2[1]",
-    "pct_rural":  "https://servicodados.ibge.gov.br/api/v3/agregados/9174/periodos/2019|2020|2021|2022|2023/variaveis/49109?localidades=N3[all]&classificacao=2[2]",
+    "pct_total": "https://servicodados.ibge.gov.br/api/v3/agregados/9173/periodos/2019|2020|2021|2022|2023/variaveis/49109?localidades=N3[all]",
 }
 
 
@@ -182,18 +175,23 @@ TENDENCIA_NACIONAL = {2019: 79.1, 2020: 82.7, 2021: 85.0, 2022: 86.8, 2023: 87.0
 
 
 def build_fallback_sidra() -> dict[str, pd.DataFrame]:
-    """Reconstrói as séries 2019–2023 por UF a partir dos valores 2023
-    embutidos, deslocados pela tendência nacional. Urbano/rural seguem os
-    mesmos offsets do projeto market-expansion-eda (+5pp / -20pp)."""
-    frames = {"pct_total": [], "pct_urbano": [], "pct_rural": []}
+    """Reconstrói a série 2019–2023 por UF a partir dos valores reais de 2023,
+    deslocados pela tendência nacional do mesmo período.
+
+    IMPORTANTE para quem lê os números: só 2023 é observado. Os anos anteriores
+    são RETROPOLADOS — assumem que todo estado se moveu no mesmo ritmo da média
+    nacional. Serve para dar ordem de grandeza da evolução, não para comparar
+    velocidade de crescimento entre estados: por construção, todos crescem
+    igual. Essa limitação está declarada no README e na página de metodologia
+    do dashboard.
+    """
+    linhas = []
     for cod, v2023 in PCT_TOTAL_2023.items():
         for ano, media_nacional in TENDENCIA_NACIONAL.items():
             offset = TENDENCIA_NACIONAL[2023] - media_nacional
             total = max(min(v2023 - offset, 99.0), 1.0)
-            frames["pct_total"].append({"codigo_ibge": int(cod), "ano": ano, "valor": round(total, 1)})
-            frames["pct_urbano"].append({"codigo_ibge": int(cod), "ano": ano, "valor": round(min(total + 5, 99.0), 1)})
-            frames["pct_rural"].append({"codigo_ibge": int(cod), "ano": ano, "valor": round(max(total - 20, 1.0), 1)})
-    return {k: pd.DataFrame(v) for k, v in frames.items()}
+            linhas.append({"codigo_ibge": int(cod), "ano": ano, "valor": round(total, 1)})
+    return {"pct_total": pd.DataFrame(linhas)}
 
 
 def load_all_sidra() -> dict[str, pd.DataFrame]:
@@ -217,69 +215,33 @@ def load_all_sidra() -> dict[str, pd.DataFrame]:
 def build_fato(
     dim_uf: pd.DataFrame,
     dim_periodo: pd.DataFrame,
-    dim_metrica: pd.DataFrame,
     sidra: dict,
 ) -> pd.DataFrame:
-    uf_lookup     = dim_uf.set_index("codigo_ibge")[["id_uf"]]
-    periodo_map   = dim_periodo.set_index("ano")["id_periodo"]
-    metrica_map   = dim_metrica.set_index("nome")["id_metrica"]
+    """Fato no grão UF × ano, com uma única medida observada.
 
-    records = []
+    População, densidade e IDH NÃO entram aqui: são atributos da UF, já vivem em
+    dim_uf e não variam no tempo. Copiá-los para o fato repetia cada valor cinco
+    vezes e, no caso do IDH (censo 2010), fingia uma série anual que não existe.
+    """
+    uf_lookup   = dim_uf.set_index("codigo_ibge")["id_uf"]
+    periodo_map = dim_periodo.set_index("ano")["id_periodo"]
 
-    metrica_sources = {
-        "pct_domicilios_internet":        sidra["pct_total"],
-        "pct_domicilios_internet_urbano": sidra["pct_urbano"],
-        "pct_domicilios_internet_rural":  sidra["pct_rural"],
-    }
+    linhas = []
+    for _, row in sidra["pct_total"].iterrows():
+        if row["codigo_ibge"] not in uf_lookup.index:
+            continue
+        id_periodo = periodo_map.get(row["ano"])
+        if pd.isna(id_periodo):
+            continue
+        linhas.append({
+            "id_uf":                    int(uf_lookup.loc[row["codigo_ibge"]]),
+            "id_periodo":               int(id_periodo),
+            "pct_domicilios_internet":  row["valor"],
+        })
 
-    for metrica_nome, df_src in metrica_sources.items():
-        id_metrica = metrica_map[metrica_nome]
-        for _, row in df_src.iterrows():
-            if row["codigo_ibge"] not in uf_lookup.index:
-                continue
-            id_uf      = uf_lookup.loc[row["codigo_ibge"], "id_uf"]
-            id_periodo = periodo_map.get(row["ano"])
-            if pd.isna(id_periodo):
-                continue
-            records.append({
-                "id_uf":       id_uf,
-                "id_periodo":  id_periodo,
-                "id_metrica":  id_metrica,
-                "valor":       row["valor"],
-            })
-
-    fato = pd.DataFrame(records)
-
-    # Pivot urbano/rural into columns for gap calculation convenience
-    pivot = fato[fato["id_metrica"].isin([
-        metrica_map["pct_domicilios_internet"],
-        metrica_map["pct_domicilios_internet_urbano"],
-        metrica_map["pct_domicilios_internet_rural"],
-    ])].pivot_table(
-        index=["id_uf", "id_periodo"],
-        columns="id_metrica",
-        values="valor",
-        aggfunc="first",
-    ).reset_index()
-
-    id_total   = metrica_map["pct_domicilios_internet"]
-    id_urbano  = metrica_map["pct_domicilios_internet_urbano"]
-    id_rural   = metrica_map["pct_domicilios_internet_rural"]
-
-    # Rebuild fato with valor_urbano and valor_rural columns
-    fato_merged = pivot.rename(columns={
-        id_total:  "valor",
-        id_urbano: "valor_urbano",
-        id_rural:  "valor_rural",
-    })
-    fato_merged["id_metrica"] = id_total
-
-    # Add population and IDH from dim_uf for Power BI convenience
-    uf_extras = dim_uf.set_index("id_uf")[["populacao", "densidade_km2", "idh_2010"]]
-    fato_merged = fato_merged.join(uf_extras, on="id_uf")
-
-    fato_merged.insert(0, "id_fato", range(1, len(fato_merged) + 1))
-    return fato_merged.sort_values(["id_uf", "id_periodo"]).reset_index(drop=True)
+    fato = pd.DataFrame(linhas).sort_values(["id_uf", "id_periodo"]).reset_index(drop=True)
+    fato.insert(0, "id_fato", range(1, len(fato) + 1))
+    return fato
 
 
 # ---------------------------------------------------------------------------
@@ -288,23 +250,24 @@ def build_fato(
 
 def main():
     print("Building dimension tables...")
+    # dim_regiao continua sendo montada porque build_dim_uf a usa para resolver
+    # o nome da região, mas não é exportada: região é atributo da UF e vira
+    # coluna de dim_uf. Exportá-la criaria um floco de neve (fato -> dim_uf ->
+    # dim_regiao) sem ganho nenhum de modelagem.
     dim_regiao  = build_dim_regiao()
     dim_uf      = build_dim_uf(dim_regiao)
     dim_periodo = build_dim_periodo()
-    dim_metrica = build_dim_metrica()
 
     print("Fetching IBGE SIDRA data...")
     sidra = load_all_sidra()
 
     print("Building fact table...")
-    fato = build_fato(dim_uf, dim_periodo, dim_metrica, sidra)
+    fato = build_fato(dim_uf, dim_periodo, sidra)
 
     exports = {
         "fato_indicadores.csv": fato,
         "dim_uf.csv":           dim_uf,
         "dim_periodo.csv":      dim_periodo,
-        "dim_metrica.csv":      dim_metrica,
-        "dim_regiao.csv":       dim_regiao,
     }
 
     print("\nExporting CSVs...")

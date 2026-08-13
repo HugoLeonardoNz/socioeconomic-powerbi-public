@@ -1,130 +1,87 @@
-# Star Schema — Brecha Digital no Brasil
-
-## Diagrama
+# Modelo de dados — Brecha Digital
 
 ```
-                         ┌────────────────────────────────┐
-                         │         dim_periodo             │
-                         │ id_periodo  INT  PK             │
-                         │ ano         INT                 │
-                         │ data_ref    DATE                │
-                         └────────────────┬───────────────┘
-                                          │ 1
-                                          │
-┌──────────────────────┐    ┌─────────────▼──────────────────────────┐    ┌──────────────────────────┐
-│      dim_uf          │    │           fato_indicadores              │    │       dim_metrica        │
-│ id_uf      INT  PK   │1   │ id_fato        INT  PK                  │  1 │ id_metrica   INT  PK     │
-│ codigo_ibge INT      ├────┤ id_uf          INT  FK → dim_uf        ├────┤ nome         VARCHAR     │
-│ sigla      CHAR(2)   │    │ id_periodo     INT  FK → dim_periodo   │    │ unidade      VARCHAR     │
-│ nome       VARCHAR   │    │ id_metrica     INT  FK → dim_metrica   │    │ categoria    VARCHAR     │
-│ id_regiao  INT  FK   │    │ valor          FLOAT  (valor principal) │    │ descricao    TEXT        │
-│ populacao  INT       │    │ valor_urbano   FLOAT                   │    └──────────────────────────┘
-│ densidade  FLOAT     │    │ valor_rural    FLOAT                   │
-│ idh_2010   FLOAT     │    │ populacao      INT    (desnorm.)        │
-└──────────────────────┘    │ densidade_km2  FLOAT  (desnorm.)        │
-                            │ idh_2010       FLOAT  (desnorm.)        │
-       ┌────────────────────└────────────────────────────────────────┘
-       │
-       │ Many-to-One (via dim_uf[id_regiao])
-       ▼
-┌──────────────────────┐
-│      dim_regiao      │
-│ id_regiao   INT  PK  │
-│ nome        VARCHAR  │
-│ sigla       CHAR(2)  │
-└──────────────────────┘
+        ┌──────────────────────────┐
+        │   fato_indicadores       │        grão: UF × ano
+        │──────────────────────────│        135 linhas (27 UFs × 5 anos)
+   ┌────┤ id_fato        (chave)   ├────┐
+   │    │ id_uf          (FK)      │    │
+   │    │ id_periodo     (FK)      │    │
+   │    │ pct_domicilios_internet  │    │
+   │    └──────────────────────────┘    │
+   │                                    │
+   ▼                                    ▼
+ dim_uf (27)                       dim_periodo (5)
+ ───────────                       ──────────────
+ id_uf          (PK)               id_periodo  (PK)
+ codigo_ibge                       Ano
+ UF · Estado · Região              data_ref
+ População
+ Densidade (hab/km²)
+ IDH
 ```
 
-## Grão da Tabela Fato
-
-**1 registro = 1 estado × 1 período × 1 métrica**
-
-| Campo | Exemplo |
-|-------|---------|
-| id_uf | 35 (São Paulo) |
-| id_periodo | 5 (2023) |
-| id_metrica | 1 (pct_domicilios_internet) |
-| valor | 88.4 (%) |
-| valor_urbano | 91.2 |
-| valor_rural | 68.7 |
+**Relacionamentos:** muitos-para-um, filtro simples, do fato para a dimensão. Nenhuma
+relação bidirecional.
 
 ---
 
-## Tabela Fato: fato_indicadores
+## Grão
 
-| Campo | Tipo | Nulo | Descrição |
-|-------|------|------|-----------|
-| `id_fato` | INT | ✗ | Chave surrogate |
-| `id_uf` | INT | ✗ | FK → dim_uf |
-| `id_periodo` | INT | ✗ | FK → dim_periodo |
-| `id_metrica` | INT | ✗ | FK → dim_metrica |
-| `valor` | FLOAT | ✓ | Valor principal da métrica |
-| `valor_urbano` | FLOAT | ✓ | Valor para domicílios urbanos |
-| `valor_rural` | FLOAT | ✓ | Valor para domicílios rurais |
-| `populacao` | INT | ✓ | Desnormalizado para cálculos de oportunidade |
-| `densidade_km2` | FLOAT | ✓ | Desnormalizado |
-| `idh_2010` | FLOAT | ✓ | Desnormalizado |
-
-> **Nota sobre desnormalização:** `populacao`, `densidade_km2` e `idh_2010` foram copiados de `dim_uf` para a fato para facilitar medidas DAX que precisam de `SUMPRODUCT` ou `SUMX` sem `RELATED()`. É uma opção deliberada de performance.
+Uma linha por unidade da federação por ano. A única medida observada é
+`pct_domicilios_internet` — proporção de domicílios com acesso à internet.
 
 ---
 
-## dim_uf
+## Decisões de modelagem
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `id_uf` | INT PK | Código IBGE do estado |
-| `codigo_ibge` | INT | Mesmo que id_uf (para JOIN com GeoJSON) |
-| `sigla` | CHAR(2) | Ex: SP, MG, RJ |
-| `nome` | VARCHAR | Nome completo |
-| `id_regiao` | INT FK | Chave para dim_regiao |
-| `regiao` | VARCHAR | Desnormalizado para facilidade |
-| `populacao` | INT | Estimativa IBGE 2023 |
-| `densidade_km2` | FLOAT | Hab/km² |
-| `idh_2010` | FLOAT | IDH-M 2010 (PNUD Brasil) |
+### Duas dimensões, não quatro
 
----
+O modelo tinha `dim_metrica` (cinco métricas) e `dim_regiao`. Ambas saíram:
 
-## dim_periodo
+- **`dim_metrica`** anunciava cinco métricas — penetração total, urbana, rural, renda e
+  população — das quais o fato carregava **uma**. Dimensão para a qual nenhuma chave
+  aponta é decoração: infla o diagrama e não muda nenhuma consulta.
+- **`dim_regiao`** transformava o modelo em floco de neve (fato → dim_uf → dim_regiao)
+  sem ganho nenhum. Região é atributo do estado e vive como coluna de `dim_uf`.
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `id_periodo` | INT PK | 1–5 |
-| `ano` | INT | 2019–2023 |
-| `data_ref` | DATE | 31/12 do ano (para DATEADD/SAMEPERIODLASTYEAR) |
+### Atributos da UF ficam só na dimensão
 
----
+`População`, `Densidade` e `IDH` estavam **copiados dentro do fato**, repetidos cinco
+vezes por estado. Pior no caso do IDH: um valor do censo 2010 replicado ao longo de
+2019–2023, dando aparência de série anual a um número que não varia.
 
-## dim_metrica
+Agora vivem apenas em `dim_uf`. As medidas alcançam esses valores com `RELATED()` quando
+precisam ponderar — por exemplo, `Penetração Brasil`, que pondera a média nacional pela
+população de cada estado.
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `id_metrica` | INT PK | 1–5 |
-| `nome` | VARCHAR | Identificador (slug) da métrica |
-| `unidade` | VARCHAR | %, R$, hab, etc. |
-| `categoria` | VARCHAR | Acesso, Renda, Demo |
-| `direcao_positiva` | BIT | 1 = maior é melhor |
-| `descricao` | TEXT | Descrição completa |
+### O recorte urbano × rural não existe mais
+
+Existia como duas colunas no fato. A fonte offline só sabia produzi-lo aplicando um
+desvio fixo sobre o total (+5pp urbano, −20pp rural), o que resultava num gap de
+**exatamente 25,0 pontos percentuais em todos os 27 estados, em todos os anos**.
+
+Um indicador construído para não distinguir estado nenhum não pode ser usado para
+comparar estados. Foi removido do pipeline, do modelo e do dashboard.
 
 ---
 
-## dim_regiao
+## Tipagem e cultura
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `id_regiao` | INT PK | 1–5 |
-| `nome` | VARCHAR | Norte, Nordeste, Sudeste, Sul, Centro-Oeste |
-| `sigla` | CHAR(2) | N, NE, SE, S, CO |
+Os CSVs usam ponto como separador decimal e o modelo está em pt-BR, onde o ponto é
+separador de milhar. Sem cultura explícita na conversão, `74.5` vira `745` — silenciosamente,
+sem erro, com a penetração indo para 874% e a população sem acesso ficando negativa.
+
+As consultas M declaram a cultura:
+
+```m
+Table.TransformColumnTypes(fonte, {{"pct_domicilios_internet", type number}}, "en-US")
+```
 
 ---
 
-## Decisões de Modelagem
+## Origem do caminho dos arquivos
 
-### Por que star schema (e não snowflake)?
-O dataset tem apenas 27 estados e 5 anos — volume muito baixo para justificar normalização adicional. O star schema reduz a complexidade dos relacionamentos no Power BI e melhora a legibilidade das medidas DAX.
-
-### Por que `valor_urbano` e `valor_rural` na fato (e não numa dimensão)?
-Essas são quebras da **mesma métrica** (penetração de internet), não dimensões independentes. Manter como colunas da fato permite calcular `Gap Digital = valor_urbano - valor_rural` diretamente em DAX sem JOINS adicionais.
-
-### Por que desnormalizar populacao/IDH na fato?
-O DAX tem performance ruim com `SUMX(..., RELATED(...))` em tabelas grandes. Para as fórmulas de `Score Oportunidade` que precisam de produto entre métricas de UFs diferentes, ter os valores na fato evita o custo de lookup.
+O caminho da pasta de CSVs é o parâmetro **`PastaDados`** do Power Query, não um literal
+dentro de cada consulta. Ao clonar o repositório, muda-se em um lugar só:
+*Transformar dados → Gerenciar parâmetros*.

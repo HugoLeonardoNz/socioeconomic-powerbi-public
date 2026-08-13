@@ -1,271 +1,218 @@
-# DAX Measures — Brecha Digital no Brasil Dashboard
+# Medidas DAX — Brecha Digital
 
-## Configuração de Relacionamentos
+24 medidas na tabela `_Medidas`, agrupadas em pastas numeradas por domínio. **O modelo é
+a fonte da verdade**; se este documento divergir dele, o modelo está certo.
 
 ```
-fato_indicadores[id_uf]       → dim_uf[id_uf]           (Many-to-One)
-fato_indicadores[id_periodo]  → dim_periodo[id_periodo]  (Many-to-One)
-fato_indicadores[id_metrica]  → dim_metrica[id_metrica]  (Many-to-One)
-dim_uf[id_regiao]             → dim_regiao[id_regiao]    (Many-to-One)
+[00] Parâmetros   [01] Acesso        [02] Brecha
+[03] Rankings     [04] Tempo         [05] Socioeconômico
+[06] Oportunidade [08] Narrativa     [09] Auxiliares
+```
+
+### Convenções
+
+- Toda divisão usa `DIVIDE`, nunca `/` — evita erro de divisão por zero.
+- Percentual guarda a fração (0–1); o formato cuida da exibição. Nada de `* 100` na fórmula.
+- Medida sem sentido no contexto devolve `BLANK()`, nunca zero: um zero mente, um vazio
+  admite que não sabe.
+- Formato definido na medida, não no visual — o número sai igual em qualquer lugar.
+
+---
+
+## [00] Parâmetros
+
+```dax
+-- Constante isolada: um único lugar para mudar se a fonte revisar o número.
+Moradores por Domicílio = 3.1   -- PNAD Contínua 2023
+
+-- Âncora temporal de todas as medidas de estoque. Num cartão sem filtro devolve
+-- 2023; dentro de um gráfico quebrado por ano, devolve o ano daquele ponto.
+Ano de Referência = MAX(dim_periodo[Ano])
 ```
 
 ---
 
-## Medidas Base de Acesso
+## [01] Acesso
 
 ```dax
--- % Domicílios com internet (contexto filtrado)
-% Internet Total =
-CALCULATE(
-    AVERAGE(fato_indicadores[valor]),
-    dim_metrica[nome] = "pct_domicilios_internet"
-)
-
--- % Acesso em domicílios urbanos
-% Internet Urbano =
-CALCULATE(
-    AVERAGE(fato_indicadores[valor_urbano]),
-    dim_metrica[nome] = "pct_domicilios_internet"
-)
-
--- % Acesso em domicílios rurais
-% Internet Rural =
-CALCULATE(
-    AVERAGE(fato_indicadores[valor_rural]),
-    dim_metrica[nome] = "pct_domicilios_internet"
-)
-
--- Cobertura nacional (sem filtros de UF)
-% Internet Brasil =
-CALCULATE(
-    [% Internet Total],
-    ALL(dim_uf),
-    ALL(dim_regiao)
-)
-```
-
----
-
-## Brecha Digital
-
-```dax
--- Gap entre acesso urbano e rural (pp)
-Gap Digital =
-VAR urbano = [% Internet Urbano]
-VAR rural  = [% Internet Rural]
+-- Penetração no contexto: para uma UF é o valor dela, para várias é a média simples.
+Penetração =
+VAR _ano = [Ano de Referência]
 RETURN
-    IF(NOT ISBLANK(urbano) && NOT ISBLANK(rural), urbano - rural, BLANK())
+    CALCULATE(
+        AVERAGE(fato_indicadores[pct_domicilios_internet]) / 100,
+        dim_periodo[Ano] = _ano
+    )
 
--- Gap vs média nacional
-Gap vs Brasil =
-[% Internet Total] - [% Internet Brasil]
+-- Nacional PONDERADA pela população: 87,4% em 2023.
+-- Ignora seleção de UF de propósito, para servir de linha de base comparável.
+Penetração Brasil =
+VAR _ano = [Ano de Referência]
+RETURN
+    CALCULATE(
+        DIVIDE(
+            SUMX(fato_indicadores, fato_indicadores[pct_domicilios_internet] / 100 * RELATED(dim_uf[População])),
+            SUMX(fato_indicadores, RELATED(dim_uf[População]))
+        ),
+        dim_periodo[Ano] = _ano,
+        REMOVEFILTERS(dim_uf)
+    )
 
--- Classificação por gap digital
-Classificação Gap =
+-- Média simples dos 27 estados: 84,9%. Fica exposta ao lado da ponderada porque
+-- a diferença de 2,5pp não é ruído — é o efeito de os estados grandes terem mais
+-- acesso, e as duas médias respondem perguntas diferentes.
+Penetração Média das UFs = ...  -- igual à de cima, sem a ponderação
+
+População Total = SUM(dim_uf[População])
+```
+
+---
+
+## [02] Brecha
+
+```dax
+-- Leitura em gente do percentual de domicílios. Assume tamanho de domicílio
+-- uniforme dentro da UF: não é contagem individual.
+Pessoas sem Acesso =
+VAR _ano = [Ano de Referência]
+RETURN
+    CALCULATE(
+        SUMX(
+            fato_indicadores,
+            (1 - fato_indicadores[pct_domicilios_internet] / 100) * RELATED(dim_uf[População])
+        ),
+        dim_periodo[Ano] = _ano
+    )
+
+Domicílios sem Internet = DIVIDE([Pessoas sem Acesso], [Moradores por Domicílio])
+
+Lacuna até 100% = IF(NOT ISBLANK([Penetração]), 1 - [Penetração])
+
+Gap vs Brasil (pp) = IF(NOT ISBLANK([Penetração]), ([Penetração] - [Penetração Brasil]) * 100)
+
+-- Distância entre o melhor e o pior estado: 21,3pp em 2023. É a medida da
+-- desigualdade, que é o assunto do painel.
+Amplitude entre UFs (pp) = ...
+```
+
+---
+
+## [03] Rankings
+
+Os dois rankings existem para discordar entre si — é o achado central do painel.
+
+```dax
+-- 1 = maior penetração.
+--
+-- Não usa RANKX direto. Quando a tabela mostra também região ou IDH, a transição
+-- de contexto fixa a LINHA INTEIRA de dim_uf, não só a coluna do ranking: toda
+-- avaliação devolve o mesmo valor e o ranking sai 1 para todo mundo. Não dá erro,
+-- só devolve número errado. Reconstruir a série com REMOVEFILTERS resolve.
+Ranking Penetração =
+IF(
+    NOT ISBLANK([Penetração]),
+    VAR _serie =
+        ADDCOLUMNS(
+            ALLSELECTED(dim_uf[UF]),
+            "@p",
+            VAR _u = dim_uf[UF]
+            RETURN CALCULATE([Penetração], REMOVEFILTERS(dim_uf), dim_uf[UF] = _u)
+        )
+    VAR _eu = [Penetração]
+    RETURN COUNTROWS(FILTER(_serie, [@p] > _eu)) + 1
+)
+
+Ranking Volume sem Acesso = ...   -- mesmo padrão, sobre [Pessoas sem Acesso]
+
+-- Quantas posições o estado anda ao trocar o critério. São Paulo anda 2
+-- (3º em taxa, 1º em volume); o Maranhão anda 21 (27º em taxa, 6º em volume).
+Distância entre Rankings =
+IF(
+    NOT ISBLANK([Penetração]),
+    ABS([Ranking Penetração] - [Ranking Volume sem Acesso])
+)
+```
+
+---
+
+## [04] Tempo
+
+```dax
+Penetração Ano Anterior = ...   -- REMOVEFILTERS(dim_periodo) + Ano = _ano - 1
+Variação Anual (pp)     = ([Penetração] - [Penetração Ano Anterior]) * 100
+Avanço 2019-2023 (pp)   = ...   -- primeira contra última observação da série
+```
+
+> Lembrete de leitura: a série 2019–2022 é retropolada pela variação nacional. Todo
+> estado cresce no mesmo ritmo **por construção** — estas medidas dão ordem de grandeza,
+> não comparação de velocidade entre estados.
+
+---
+
+## [05] Socioeconômico
+
+```dax
+IDH Médio = AVERAGE(dim_uf[IDH])
+
+-- Pearson entre IDH e penetração no conjunto de UFs visível: 0,883 em 2023.
+-- Reage ao slicer — não é número fixo escrito no título.
+Correlação IDH x Penetração =
+VAR _ano = [Ano de Referência]
+VAR _t =
+    CALCULATETABLE(
+        ADDCOLUMNS(
+            SUMMARIZE(ALLSELECTED(dim_uf), dim_uf[UF], dim_uf[IDH]),
+            "@pen",
+            VAR _u = dim_uf[UF]
+            RETURN CALCULATE([Penetração], REMOVEFILTERS(dim_uf), dim_uf[UF] = _u)
+        ),
+        dim_periodo[Ano] = _ano
+    )
+VAR _n   = COUNTROWS(_t)
+VAR _mx  = AVERAGEX(_t, dim_uf[IDH])
+VAR _my  = AVERAGEX(_t, [@pen])
+VAR _cov = SUMX(_t, (dim_uf[IDH] - _mx) * ([@pen] - _my))
+VAR _sx  = SQRT(SUMX(_t, (dim_uf[IDH] - _mx) ^ 2))
+VAR _sy  = SQRT(SUMX(_t, ([@pen] - _my) ^ 2))
+RETURN IF(_n > 2, DIVIDE(_cov, _sx * _sy))
+
+-- 78,0%: o quanto da variação de acesso entre estados o IDH sozinho explica.
+R² IDH = [Correlação IDH x Penetração] ^ 2
+```
+
+---
+
+## [06] Oportunidade
+
+```dax
+-- Fila de prioridade de expansão: 60% mercado endereçável (quanta gente está
+-- fora) + 40% lacuna até universalizar (quão fácil é ganhar share).
+-- Os pesos são escolha de modelagem — mudam a fila, por isso estão declarados
+-- na página de metodologia do painel e não escondidos no código.
+Score Oportunidade = ...   -- componentes reescalados pelo máximo do conjunto
+
+Prioridade =
 SWITCH(
     TRUE(),
-    [Gap Digital] >= 30, "🔴 Gap Crítico (≥30pp)",
-    [Gap Digital] >= 20, "🟡 Gap Alto (20–30pp)",
-    [Gap Digital] >= 10, "🟠 Gap Moderado (10–20pp)",
-    "🟢 Gap Baixo (<10pp)"
+    ISBLANK([Score Oportunidade]), BLANK(),
+    [Score Oportunidade] >= 0.60, "Prioridade alta",
+    [Score Oportunidade] >= 0.35, "Prioridade média",
+    "Prioridade baixa"
 )
 ```
 
 ---
 
-## Variações Temporais
+## [08] Narrativa
 
-```dax
--- Penetração no período anterior (ano anterior via slicer)
-% Internet Ano Anterior =
-CALCULATE(
-    [% Internet Total],
-    DATEADD(dim_periodo[data_ref], -1, YEAR)
-)
+`Título Dinâmico` e `Leitura da Brecha` leem os próprios números e reagem aos filtros do
+rail. A `Leitura da Brecha` é o texto da faixa da primeira página: identifica a
+penetração nacional, o total de pessoas sem acesso, a amplitude entre estados, o R² do
+IDH e o estado com maior volume desconectado — tudo em uma frase.
 
--- Variação anual em pontos percentuais
-Variação Anual pp =
-[% Internet Total] - [% Internet Ano Anterior]
+## [09] Auxiliares
 
--- Variação anual em %
-Variação Anual % =
-DIVIDE(
-    [Variação Anual pp],
-    [% Internet Ano Anterior],
-    BLANK()
-)
-
--- CAGR 5 anos (2019 → 2023)
-CAGR 5 Anos =
-VAR v_2019 = CALCULATE([% Internet Total], dim_periodo[ano] = 2019)
-VAR v_2023 = CALCULATE([% Internet Total], dim_periodo[ano] = 2023)
-RETURN
-    IF(
-        NOT ISBLANK(v_2019) && v_2019 > 0,
-        POWER(v_2023 / v_2019, 1/4) - 1,
-        BLANK()
-    )
-```
-
----
-
-## Rankings
-
-```dax
--- Ranking nacional de penetração (1 = maior penetração)
-Ranking Penetração =
-RANKX(
-    ALL(dim_uf),
-    [% Internet Total],
-    ,
-    DESC,
-    DENSE
-)
-
--- Ranking de gap digital (1 = maior gap)
-Ranking Gap Digital =
-RANKX(
-    ALL(dim_uf),
-    [Gap Digital],
-    ,
-    DESC,
-    DENSE
-)
-
--- Ranking de oportunidade de mercado (1 = maior oportunidade)
-Ranking Oportunidade =
-RANKX(
-    ALL(dim_uf),
-    [Score Oportunidade Mercado],
-    ,
-    DESC,
-    DENSE
-)
-```
-
----
-
-## Score de Oportunidade de Mercado
-
-```dax
--- Domicílios estimados sem internet (em milhares)
-Domicílios sem Internet (mil) =
-VAR pop         = RELATED(dim_uf[populacao])
-VAR pct_sem     = 1 - [% Internet Total] / 100
-VAR media_morad = 3.1   -- média de moradores por domicílio Brasil (IBGE 2022)
-RETURN
-    DIVIDE(pop * pct_sem, media_morad * 1000, BLANK())
-
--- Score composto: penetração baixa × população alta × IDH moderado
-Score Oportunidade Mercado =
-VAR pct_sem = 1 - [% Internet Total] / 100
-VAR pop     = RELATED(dim_uf[populacao]) / 1000000   -- em milhões
-VAR idh     = RELATED(dim_uf[idh_2010])
--- IDH moderado (0.65–0.75) = maior propensão a adotar se ofertado
-VAR idh_peso = IF(idh >= 0.65 && idh <= 0.75, 1.2, IF(idh < 0.65, 0.8, 1.0))
-RETURN
-    IF(
-        NOT ISBLANK(pct_sem) && NOT ISBLANK(pop),
-        pct_sem * pop * idh_peso,
-        BLANK()
-    )
-
--- Texto descritivo do score para tooltip
-Label Oportunidade =
-"Score: " & FORMAT([Score Oportunidade Mercado], "0.00") &
-" | " & FORMAT([Domicílios sem Internet (mil)], "#,##0") & "k domicílios"
-```
-
----
-
-## Correlação Socioeconômica (para scatter plots)
-
-```dax
--- IDH do estado selecionado (para scatter)
-IDH Estado =
-RELATED(dim_uf[idh_2010])
-
--- Quartil de penetração (para segmentação no scatter)
-Quartil Penetração =
-VAR v = [% Internet Total]
-VAR p25 = PERCENTILEINC(ALL(dim_uf), 0.25, [% Internet Total])
-VAR p50 = PERCENTILEINC(ALL(dim_uf), 0.50, [% Internet Total])
-VAR p75 = PERCENTILEINC(ALL(dim_uf), 0.75, [% Internet Total])
-RETURN
-    SWITCH(
-        TRUE(),
-        v <= p25, "Q1 — Baixo",
-        v <= p50, "Q2 — Médio-Baixo",
-        v <= p75, "Q3 — Médio-Alto",
-        "Q4 — Alto"
-    )
-
--- Desvio da linha de tendência (penetração observada vs esperada por IDH)
--- Coeficientes estimados via regressão: pct_internet ≈ 0.93 * IDH_normalizado
-Desvio Tendência =
-VAR idh_norm = (RELATED(dim_uf[idh_2010]) - 0.630) / (0.824 - 0.630)  -- min-max [0,1]
-VAR esperado = 65 + 30 * idh_norm  -- intercepto 65%, slope empírico
-RETURN [% Internet Total] - esperado
-```
-
----
-
-## Medidas de Contexto (Cards e KPIs)
-
-```dax
--- Estado selecionado (para título dinâmico)
-Estado Selecionado =
-IF(
-    HASONEVALUE(dim_uf[nome]),
-    SELECTEDVALUE(dim_uf[nome]),
-    "Brasil"
-)
-
--- Ano selecionado
-Ano Selecionado =
-IF(
-    HASONEVALUE(dim_periodo[ano]),
-    FORMAT(SELECTEDVALUE(dim_periodo[ano]), "0"),
-    "2019–2023"
-)
-
--- Texto de variação anual formatado
-Texto Variação Anual =
-VAR v = [Variação Anual pp]
-RETURN
-    IF(
-        ISBLANK(v),
-        "—",
-        IF(v >= 0,
-            "▲ +" & FORMAT(v, "0.0") & "pp vs ano ant.",
-            "▼ " & FORMAT(v, "0.0") & "pp vs ano ant."
-        )
-    )
-```
-
----
-
-## Tabela Calculada — Resumo Executivo
-
-```dax
-Resumo por Região =
-SUMMARIZECOLUMNS(
-    dim_regiao[nome],
-    dim_periodo[ano],
-    "% Internet",              [% Internet Total],
-    "% Urbano",                [% Internet Urbano],
-    "% Rural",                 [% Internet Rural],
-    "Gap Digital (pp)",        [Gap Digital],
-    "Variação Anual pp",       [Variação Anual pp],
-    "Score Oportunidade",      [Score Oportunidade Mercado]
-)
-```
-
----
-
-## Dicas de Implementação
-
-1. **Scatter plot IDH × Internet**: use `IDH Estado` no eixo X e `% Internet Total` no Y, tamanho da bolha = `Domicílios sem Internet (mil)`
-2. **Choropleth**: usar visual de Mapa Preenchido com `dim_uf[sigla]` em Localização e `% Internet Total` em Saturação de Cor
-3. **Seletor de ano**: conectar slicer de `dim_periodo[ano]` — as medidas YoY funcionam automaticamente
-4. **Formatação condicional**: aplicar escala de cor Branca→Azul escuro em qualquer coluna numérica de penetração
+`Cor Prioridade` e `Cor Gap` devolvem hexadecimal para formatação condicional por valor
+de campo. Funcionam em cartão; em gráfico de barras a cor precisa ser declarada por
+seletor de categoria (ver `tools/build_report.py`), porque ali o Power BI avalia a
+expressão fora do contexto do ponto e pintaria tudo igual.

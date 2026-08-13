@@ -1,6 +1,0 @@
-﻿id_metrica,nome,unidade,categoria,direcao_positiva,descricao
-1,pct_domicilios_internet,%,Acesso,1,Proporção de domicílios com acesso à internet
-2,pct_domicilios_internet_urbano,%,Acesso,1,Domicílios urbanos com acesso à internet
-3,pct_domicilios_internet_rural,%,Acesso,1,Domicílios rurais com acesso à internet
-4,renda_domiciliar_pc,R$,Renda,1,Renda domiciliar per capita média
-5,populacao,hab,Demo,1,População estimada
