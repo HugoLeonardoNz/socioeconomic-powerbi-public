@@ -234,13 +234,13 @@ def panel(title: str | None = None, subtitle: str | None = None, framed: bool = 
         c["title"] = obj(
             show=lit(True), text=lit(title),
             fontColor=solid(INK), background=solid(BG_CARD),
-            fontFamily=lit(FONT_TITLE), fontSize=lit(13),
+            fontFamily=lit(FONT_TITLE), fontSize=lit(16),
             alignment=lit("left"), titleWrap=lit(False),
         )
         c["subTitle"] = obj(
             show=lit(bool(subtitle)), text=lit(subtitle or ""),
             fontColor=solid(INK_DIM), fontFamily=lit(FONT),
-            fontSize=lit(9), alignment=lit("left"), titleWrap=lit(False),
+            fontSize=lit(11), alignment=lit("left"), titleWrap=lit(False),
         )
     else:
         c["title"] = obj(show=lit(False))
@@ -257,7 +257,7 @@ def bare() -> dict:
     }
 
 
-def axis_cat(font: int = 9, categorical: bool = False) -> list:
+def axis_cat(font: int = 11, categorical: bool = False) -> list:
     props = {
         "show": lit(True), "labelColor": solid(INK_MUT),
         "fontFamily": lit(FONT), "fontSize": lit(font),
@@ -271,7 +271,7 @@ def axis_cat(font: int = 9, categorical: bool = False) -> list:
     return [{"properties": props}]
 
 
-def axis_val(show: bool = True, font: int = 9, start: float | None = None) -> list:
+def axis_val(show: bool = True, font: int = 11, start: float | None = None) -> list:
     props = {
         "show": lit(show), "labelColor": solid(INK_MUT),
         "fontFamily": lit(FONT), "fontSize": lit(font),
@@ -287,19 +287,19 @@ def axis_val(show: bool = True, font: int = 9, start: float | None = None) -> li
 def legend(position: str = "TopLeft", show: bool = True) -> list:
     return obj(
         show=lit(show), labelColor=solid(INK_MUT), fontFamily=lit(FONT),
-        fontSize=lit(9), showTitle=lit(False), position=lit(position),
+        fontSize=lit(11), showTitle=lit(False), position=lit(position),
     )
 
 
-def data_labels(show: bool = True, color: str = INK_MUT, font: int = 9) -> list:
+def data_labels(show: bool = True, color: str = INK_MUT, font: int = 11) -> list:
     return obj(show=lit(show), color=solid(color), fontFamily=lit(FONT), fontSize=lit(font))
 
 
-def table_style(total: bool = False, font: int = 10) -> dict:
+def table_style(total: bool = False, font: int = 12) -> dict:
     return {
         "columnHeaders": obj(
             fontColor=solid(INK_DIM), backColor=solid(BG_CARD),
-            fontFamily=lit(FONT_SEMI), fontSize=lit(9),
+            fontFamily=lit(FONT_SEMI), fontSize=lit(11),
             outline=lit("BottomOnly"), wordWrap=lit(False),
         ),
         "values": obj(
@@ -499,7 +499,7 @@ def scatter(page: str, key: str, box, title: str, subtitle: str,
         "valueAxis": axis_val(),
         "legend": legend("Bottom", show=bool(series)),
         "categoryLabels": obj(show=lit(True), color=solid(INK_MUT),
-                              fontFamily=lit(FONT), fontSize=lit(9)),
+                              fontFamily=lit(FONT), fontSize=lit(11)),
         "fillPoint": obj(show=lit(True)),
     }
     if points:
@@ -510,22 +510,29 @@ def scatter(page: str, key: str, box, title: str, subtitle: str,
     )
 
 
-def slicer(page: str, key: str, box, label: str, entity: str, prop: str) -> dict:
+def slicer(page: str, key: str, box, label: str, entity: str, prop: str,
+           blocos: bool = False) -> dict:
+    """`blocos=True` renderiza cada valor como botao — o acabamento do Chiclet
+    Slicer feito com o visual nativo. So vale a pena com poucos valores: no rail
+    de 168px, Estado (27) precisa continuar como lista suspensa."""
     return visual(
         page, key, "slicer", box,
         query=q({"Values": [column_field(entity, prop)]}),
         objects={
-            "data": obj(mode=lit("Dropdown")),
-            "general": obj(orientation=lit(1)),
+            "data": obj(mode=lit("Basic" if blocos else "Dropdown")),
+            "general": obj(orientation=lit(0 if blocos else 1)),
             "selection": obj(singleSelect=lit(False), strictSingleSelect=lit(False)),
             "header": obj(
                 show=lit(True), text=lit(label), fontColor=solid(INK_DIM),
                 background=solid(BG_CARD), fontFamily=lit(FONT_SEMI),
-                fontSize=lit(9), outline=lit("None"),
+                fontSize=lit(11), outline=lit("None"),
             ),
             "items": obj(
-                fontColor=solid(INK), background=solid(BG_CARD),
-                fontFamily=lit(FONT), fontSize=lit(10), outline=lit("None"),
+                fontColor=solid(INK_MUT), background=solid(BG_CARD),
+                fontFamily=lit(FONT), fontSize=lit(11),
+                outline=lit("Frame") if blocos else lit("None"),
+                outlineColor=solid(BORDER), outlineWeight=lit(1),
+                padding=lit(6),
             ),
         },
         container={
@@ -558,22 +565,23 @@ def chrome(page: str, titulo: str, lede: str, filtros: bool = True) -> list:
         ]),
     ]
     if filtros:
-        for i, (label, ent, prop) in enumerate([
-            ("Ano", "dim_periodo", "Ano"),
-            ("Região", "dim_uf", "Região"),
-            ("Estado", "dim_uf", "Estado"),
-        ]):
-            v.append(slicer(page, f"slicer_{prop}", (20, 176 + i * 76, RAIL_W - 40, 60),
-                            label, ent, prop))
+        # Regiao em blocos (5 valores empilham bem no rail); Ano e Estado
+        # continuam suspensos — 27 estados em botao nao caberiam em 168px.
+        v.append(slicer(page, "slicer_Ano", (20, 176, RAIL_W - 40, 62),
+                        "Ano", "dim_periodo", "Ano"))
+        v.append(slicer(page, "slicer_Regiao", (20, 254, RAIL_W - 40, 200),
+                        "Região", "dim_uf", "Região", blocos=True))
+        v.append(slicer(page, "slicer_Estado", (20, 470, RAIL_W - 40, 62),
+                        "Estado", "dim_uf", "Estado"))
     v.append(textbox(page, "fonte", (24, PAGE_H - 132, RAIL_W - 44, 100), [
-        run("FONTE\n", 8, INK_DIM, bold=True),
-        run("IBGE · PNAD Contínua\nPNUD · Atlas do IDH\nSérie 2019–2022 retropolada", 8, INK_DIM),
+        run("FONTE\n", 9, INK_DIM, bold=True),
+        run("IBGE · PNAD Contínua\nPNUD · Atlas do IDH\nSérie 2019–2022 retropolada", 9, INK_DIM),
     ]))
 
     # Cabecalho editorial: titulo em serifa + linha de apoio
     v.append(textbox(page, "titulo", (CONTENT_X, HEAD_Y, CONTENT_W, 116), [
         run(titulo, 30, INK, bold=True, font=FONT_TITLE),
-        run("\n" + lede, 12, INK_MUT),
+        run("\n" + lede, 13, INK_MUT),
     ]))
     return v
 
@@ -603,7 +611,7 @@ def page_brecha() -> tuple[str, list]:
         p, "leitura", "card", (CONTENT_X, ins_y, CONTENT_W, ins_h),
         query=q({"Values": [measure_field("Leitura da Brecha")]}),
         objects={
-            "labels": obj(color=solid(INK), fontFamily=lit(FONT_TITLE), fontSize=lit(12)),
+            "labels": obj(color=solid(INK), fontFamily=lit(FONT_TITLE), fontSize=lit(14)),
             "categoryLabels": obj(show=lit(False)),
             "wordWrap": obj(show=lit(True)),
         },
