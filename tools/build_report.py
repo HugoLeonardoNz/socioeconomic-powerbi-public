@@ -523,7 +523,7 @@ def scatter(page: str, key: str, box, title: str, subtitle: str,
 
 
 def chiclet(page: str, key: str, box, label: str, entity: str, prop: str,
-            colunas: int, busca: bool = False) -> dict:
+            colunas: int) -> dict:
     """Chiclet Slicer no rail — cada valor vira um bloco clicavel.
 
     O visual nativo nao expoe cor de estado: selecionado e nao selecionado saem
@@ -543,14 +543,11 @@ def chiclet(page: str, key: str, box, label: str, entity: str, prop: str,
                 multiselect=lit(True),
                 showDisabled=lit("Inplace"),
                 forcedSelection=lit(False),
-                selfFilterEnabled=lit(busca),
             ),
             "header": obj(
                 show=lit(True), title=lit(label.upper()),
                 fontColor=solid(TEAL), background=solid(BG_RAIL),
-                textSize=lit(11),
-                outline=lit("BottomOnly"), outlineColor=solid(BORDER),
-                outlineWeight=lit(1),
+                textSize=lit(11), outline=lit("None"),
             ),
             "rows": obj(
                 fontColor=solid(INK), textSize=lit(10),
@@ -639,8 +636,11 @@ def chrome(page: str, titulo: str, lede: str, filtros: bool = True) -> list:
                          "Ano", "dim_periodo", "Ano", 2))
         v.append(chiclet(page, "slicer_Regiao", (16, 306, RAIL_W - 32, 212),
                          "Região", "dim_uf", "Região", 1))
-        v.append(chiclet(page, "slicer_Estado", (16, 530, RAIL_W - 32, 300),
-                         "Estado", "dim_uf", "Estado", 1, busca=True))
+        # Sem caixa de busca: o campo de pesquisa do Chiclet vem com fundo
+        # branco fixo, que destoa do rail. Os 27 estados rolam dentro do
+        # proprio bloco, e o filtro de Regiao ja reduz a lista antes disso.
+        v.append(chiclet(page, "slicer_Estado", (16, 530, RAIL_W - 32, 320),
+                         "Estado", "dim_uf", "Estado", 1))
     v.append(textbox(page, "fonte", (24, PAGE_H - 132, RAIL_W - 44, 100), [
         run("FONTE\n", 9, INK_DIM, bold=True),
         run("IBGE · PNAD Contínua\nPNUD · Atlas do IDH\nSérie 2019–2022 retropolada", 9, INK_DIM),
