@@ -523,7 +523,7 @@ def scatter(page: str, key: str, box, title: str, subtitle: str,
 
 
 def chiclet(page: str, key: str, box, label: str, entity: str, prop: str,
-            colunas: int) -> dict:
+            colunas: int, busca: bool = False) -> dict:
     """Chiclet Slicer no rail — cada valor vira um bloco clicavel.
 
     O visual nativo nao expoe cor de estado: selecionado e nao selecionado saem
@@ -543,11 +543,14 @@ def chiclet(page: str, key: str, box, label: str, entity: str, prop: str,
                 multiselect=lit(True),
                 showDisabled=lit("Inplace"),
                 forcedSelection=lit(False),
+                selfFilterEnabled=lit(busca),
             ),
             "header": obj(
-                show=lit(True), title=lit(label),
-                fontColor=solid(INK_DIM), background=solid(BG_RAIL),
-                textSize=lit(10), outline=lit("None"),
+                show=lit(True), title=lit(label.upper()),
+                fontColor=solid(TEAL), background=solid(BG_RAIL),
+                textSize=lit(11),
+                outline=lit("BottomOnly"), outlineColor=solid(BORDER),
+                outlineWeight=lit(1),
             ),
             "rows": obj(
                 fontColor=solid(INK), textSize=lit(10),
@@ -632,12 +635,12 @@ def chrome(page: str, titulo: str, lede: str, filtros: bool = True) -> list:
         # Ano (5 valores, rotulo curto) em duas colunas; Regiao (5 valores,
         # rotulo longo) em uma. Estado tem 27 valores e continua suspenso — em
         # bloco ocuparia o rail inteiro.
-        v.append(chiclet(page, "slicer_Ano", (16, 172, RAIL_W - 32, 128),
+        v.append(chiclet(page, "slicer_Ano", (16, 168, RAIL_W - 32, 126),
                          "Ano", "dim_periodo", "Ano", 2))
-        v.append(chiclet(page, "slicer_Regiao", (16, 312, RAIL_W - 32, 214),
+        v.append(chiclet(page, "slicer_Regiao", (16, 306, RAIL_W - 32, 212),
                          "Região", "dim_uf", "Região", 1))
-        v.append(slicer(page, "slicer_Estado", (16, 538, RAIL_W - 32, 62),
-                        "Estado", "dim_uf", "Estado"))
+        v.append(chiclet(page, "slicer_Estado", (16, 530, RAIL_W - 32, 300),
+                         "Estado", "dim_uf", "Estado", 1, busca=True))
     v.append(textbox(page, "fonte", (24, PAGE_H - 132, RAIL_W - 44, 100), [
         run("FONTE\n", 9, INK_DIM, bold=True),
         run("IBGE · PNAD Contínua\nPNUD · Atlas do IDH\nSérie 2019–2022 retropolada", 9, INK_DIM),
@@ -820,39 +823,44 @@ def page_metodo() -> tuple[str, list]:
     # Ancorado no topo: centrar verticalmente abria um vao entre o titulo da
     # pagina e o primeiro painel, que lia como erro de alinhamento. A pagina e
     # um documento — termina onde o texto termina.
-    r = split(3, 2)
+    # Alturas explicitas: com o texto em 15pt, faixas proporcionais cortavam a
+    # leitura critica. Cada bloco recebe o que o conteudo pede.
+    # A pagina de metodologia nao tem filtros no rail, entao nao herda o recuo
+    # que existe para eles: o conteudo sobe.
+    H_BLOCOS, H_NOTAS = 452, 320
+    y0 = HEAD_Y + 116
+    r = [(y0, H_BLOCOS), (y0 + H_BLOCOS + GUTTER, H_NOTAS)]
     c3 = cols(3)
 
     blocos = [
         ("Origem do dado", [
-            ("Penetração 2023", "IBGE · PNAD Contínua, proporção de domicílios com acesso à "
-                                "internet por unidade da federação. Observado."),
+            ("Penetração 2023", "IBGE · PNAD Contínua: proporção de domicílios com acesso à internet, "
+                                "por unidade da federação. Observado."),
             ("Série 2019–2022", "RETROPOLADA. Só 2023 é observado por estado; os anos anteriores "
-                                "aplicam a variação nacional do período a cada UF."),
-            ("IDH", "PNUD · Atlas do Desenvolvimento Humano, censo 2010. É constante na série — "
-                    "não existe IDH anual por estado."),
+                                "aplicam a variação nacional a cada UF."),
+            ("IDH", "PNUD · Atlas do Desenvolvimento Humano, censo 2010. É constante na "
+                    "série — não existe IDH anual por estado."),
             ("População e densidade", "IBGE · estimativas 2023 e Censo 2022. Observados."),
         ]),
         ("Modelagem", [
             ("Esquema", "Star schema: um fato (fato_indicadores) no grão UF × ano e duas "
                         "dimensões (dim_uf, dim_periodo)."),
-            ("Por que só duas dimensões", "Havia uma dim_metrica com cinco métricas, das quais o "
-                                          "fato carregava uma. Dimensão que ninguém aponta é "
-                                          "decoração — foi removida."),
-            ("Atributos da UF", "População, densidade e IDH vivem só em dim_uf. Estavam copiados "
-                                "no fato, repetidos cinco vezes por estado, fingindo série anual."),
-            ("Região", "É atributo de dim_uf, não tabela própria: evita um floco de neve sem "
+            ("Por que só duas dimensões", "Havia uma dim_metrica com cinco métricas e o fato carregava uma. "
+                                          "Dimensão que ninguém aponta é decoração — foi removida."),
+            ("Atributos da UF", "População, densidade e IDH vivem só em dim_uf. Estavam copiados no "
+                                "fato, repetidos cinco vezes por estado."),
+            ("Região", "Atributo de dim_uf, não tabela própria: evita um floco de neve sem "
                        "ganho de modelagem."),
         ]),
         ("Como ler os números", [
-            ("Duas médias diferentes", "A média simples dos 27 estados dá 84,9%. A ponderada por "
-                                       "população dá 87,4%. A diferença existe porque os estados "
-                                       "grandes têm mais acesso. O painel usa a ponderada."),
-            ("Pessoas sem acesso", "É a leitura em gente do percentual de domicílios, assumindo "
-                                   "tamanho de domicílio uniforme (3,1 moradores, PNAD 2023). "
-                                   "Não é contagem individual."),
-            ("Score de oportunidade", "Ponderação escolhida por mim: 60% volume, 40% lacuna. "
-                                      "Muda a fila se mudarem os pesos — por isso está declarado."),
+            ("Duas médias diferentes", "A média simples dos 27 estados dá 84,9%; a ponderada por população, "
+                                       "87,4%. A diferença existe porque os estados grandes têm "
+                                       "mais acesso. O painel usa a ponderada."),
+            ("Pessoas sem acesso", "Leitura em gente do percentual de domicílios, assumindo domicílio "
+                                   "uniforme (3,1 moradores, PNAD 2023). Não é contagem "
+                                   "individual."),
+            ("Score de oportunidade", "Ponderação escolhida por mim: 60% volume, 40% lacuna. Muda a fila se "
+                                      "mudarem os pesos — por isso está declarado."),
         ]),
     ]
 
@@ -860,9 +868,9 @@ def page_metodo() -> tuple[str, list]:
         runs = []
         for i, (rot, txt) in enumerate(itens):
             if i:
-                runs.append(run("\n\n", 11, INK_DIM))
-            runs.append(run(rot + "\n", 11, TEAL, bold=True))
-            runs.append(run(txt, 11, INK_MUT))
+                runs.append(run("\n\n", 15, INK_DIM))
+            runs.append(run(rot + "\n", 15, TEAL, bold=True))
+            runs.append(run(txt, 15, INK_MUT))
         v.append(visual(
             p, f"bloco_{titulo}", "textbox", (x, r[0][0], w, r[0][1]),
             objects={"general": obj(paragraphs=[{"textRuns": runs, "horizontalTextAlignment": "left"}])},
@@ -871,25 +879,25 @@ def page_metodo() -> tuple[str, list]:
 
     limites = [
         ("O que este painel NÃO responde",
-         "Não há dado de velocidade, preço, tecnologia de acesso nem qualidade de conexão. "
-         "\"Ter internet no domicílio\" inclui do 4G compartilhado à fibra de 500 mega — "
-         "duas realidades que o indicador trata como iguais."),
+         "Não há velocidade, preço, tecnologia nem qualidade de conexão. \"Ter "
+         "internet no domicílio\" inclui do 4G compartilhado à fibra de 500 mega "
+         "— duas realidades que o indicador trata como iguais."),
         ("Por que não existe recorte urbano × rural",
-         "Existia, e foi removido. A fonte offline só sabia produzi-lo aplicando um desvio fixo "
-         "sobre o total (+5pp urbano, −20pp rural), o que gerava um gap de exatamente 25,0 pontos "
-         "em todos os 27 estados. Um número que parece análise e não é: não distinguia estado "
-         "nenhum porque foi construído para não distinguir."),
+         "Existia, e foi removido. A fonte offline só sabia produzi-lo com desvio "
+         "fixo sobre o total (+5pp urbano, −20pp rural), gerando um gap de "
+         "exatamente 25,0 pontos em todos os 27 estados. Um número que parece "
+         "análise e não é: foi construído para não distinguir estado nenhum."),
         ("Consequência para a leitura da série",
-         "Como 2019–2022 é retropolado pela média nacional, todo estado cresce no mesmo ritmo por "
-         "construção. A série serve para ordem de grandeza da evolução; não serve para comparar "
-         "velocidade de adoção entre estados."),
+         "Como 2019–2022 é retropolado pela média nacional, todo estado cresce no "
+         "mesmo ritmo por construção. A série dá ordem de grandeza da evolução; "
+         "não serve para comparar velocidade de adoção entre estados."),
     ]
     runs = []
     for i, (rot, txt) in enumerate(limites):
         if i:
-            runs.append(run("\n\n", 11, INK_DIM))
-        runs.append(run(rot + "\n", 11, AMBER, bold=True))
-        runs.append(run(txt, 11, INK_MUT))
+            runs.append(run("\n\n", 15, INK_DIM))
+        runs.append(run(rot + "\n", 15, AMBER, bold=True))
+        runs.append(run(txt, 15, INK_MUT))
     v.append(visual(
         p, "limites", "textbox", (CONTENT_X, r[1][0], CONTENT_W, r[1][1]),
         objects={"general": obj(paragraphs=[{"textRuns": runs, "horizontalTextAlignment": "left"}])},
