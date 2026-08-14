@@ -19,7 +19,7 @@
   "foregroundNeutralTertiary": "#8D939C",
   "background": "#F5F2EC",
   "backgroundLight": "#FFFFFF",
-  "backgroundNeutral": "#E0D9CC",
+  "backgroundNeutral": "#D8D0C0",
   "tableAccent": "#0F5F52",
   "good": "#0F5F52",
   "neutral": "#B8A055",
@@ -70,7 +70,7 @@
             "show": true,
             "color": {
               "solid": {
-                "color": "#E0D9CC"
+                "color": "#D8D0C0"
               }
             },
             "radius": 2
@@ -224,7 +224,7 @@
             },
             "outlineColor": {
               "solid": {
-                "color": "#E0D9CC"
+                "color": "#D8D0C0"
               }
             },
             "rowPadding": 7

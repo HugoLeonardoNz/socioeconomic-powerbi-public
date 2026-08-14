@@ -43,9 +43,11 @@ BG_OUT = "#EBE6DC"     # area fora do canvas
 BG_PAGE = "#F5F2EC"    # papel
 BG_RAIL = "#EDE8DE"    # rail lateral
 BG_CARD = "#FFFFFF"    # superficie dos paineis
-BORDER = "#E0D9CC"     # fio de contorno
+BORDER = "#D8D0C0"     # fio de contorno (unica separacao, entao um tom acima)
 GRID = "#EDE8DE"       # linhas de grade
-BG_ALT = "#FAF7F1"     # faixa alternada das tabelas
+BG_ALT = "#EFEBE2"     # faixa alternada das tabelas (sutil sobre o papel)
+CHICLET_OFF = "#E7E2D7"  # bloco nao selecionado
+CHICLET_ON = "#0F5F52"   # bloco selecionado
 
 INK = "#1B1D21"        # tinta primaria
 INK_MUT = "#5B616B"    # tinta secundaria
@@ -226,8 +228,11 @@ def sort_by_column(entity: str, prop: str, direction: str = "Ascending") -> dict
 
 def panel(title: str | None = None, subtitle: str | None = None, framed: bool = True,
           centro: bool = False) -> dict:
+    # Painel sem preenchimento: o relatorio fica sobre uma superficie continua
+    # de papel e a unica separacao e o fio. Cartao branco sobre papel creme
+    # criava blocos flutuando sobre outro bloco.
     c: dict = {
-        "background": obj(show=lit(framed), color=solid(BG_CARD), transparency=lit(0)),
+        "background": obj(show=lit(False)),
         "border": obj(show=lit(framed), color=solid(BORDER), radius=lit(14)),
         "dropShadow": obj(show=lit(False)),
         "visualHeader": obj(show=lit(False)),
@@ -235,7 +240,7 @@ def panel(title: str | None = None, subtitle: str | None = None, framed: bool = 
     if title:
         c["title"] = obj(
             show=lit(True), text=lit(title),
-            fontColor=solid(INK), background=solid(BG_CARD),
+            fontColor=solid(INK), background=solid(BG_PAGE),
             fontFamily=lit(FONT_TITLE), fontSize=lit(16),
             alignment=lit("center" if centro else "left"), titleWrap=lit(False),
         )
@@ -301,7 +306,7 @@ def data_labels(show: bool = True, color: str = INK_MUT, font: int = 11) -> list
 def table_style(total: bool = False, font: int = 12) -> dict:
     return {
         "columnHeaders": obj(
-            fontColor=solid(INK_MUT), backColor=solid(BG_ALT),
+            fontColor=solid(INK_MUT), backColor=solid(BG_PAGE),
             fontFamily=lit(FONT_SEMI), fontSize=lit(11),
             outline=lit("BottomOnly"), wordWrap=lit(False),
             alignment=lit("left"),
@@ -310,7 +315,7 @@ def table_style(total: bool = False, font: int = 12) -> dict:
         # do caminho. As duas cores sao proximas de proposito — a faixa guia,
         # nao chama atencao.
         "values": obj(
-            fontColorPrimary=solid(INK), backColorPrimary=solid(BG_CARD),
+            fontColorPrimary=solid(INK), backColorPrimary=solid(BG_PAGE),
             fontColorSecondary=solid(INK), backColorSecondary=solid(BG_ALT),
             fontFamily=lit(FONT), fontSize=lit(font),
             outline=lit("None"), urlIcon=lit(False),
@@ -517,6 +522,56 @@ def scatter(page: str, key: str, box, title: str, subtitle: str,
     )
 
 
+def chiclet(page: str, key: str, box, label: str, entity: str, prop: str,
+            colunas: int) -> dict:
+    """Chiclet Slicer no rail — cada valor vira um bloco clicavel.
+
+    O visual nativo nao expoe cor de estado: selecionado e nao selecionado saem
+    iguais. O Chiclet expoe selectedColor, hoverColor e unselectedColor, que e o
+    que faz o filtro ativo se ler de longe.
+
+    Fica na vertical porque o rail tem 168px de largura util.
+    """
+    return visual(
+        page, key, "ChicletSlicer1448559807354", box,
+        query=q({"Category": [column_field(entity, prop)]}),
+        objects={
+            "general": obj(
+                orientation=lit("Vertical"),
+                columns=lit(colunas),
+                rows=lit(0),
+                multiselect=lit(True),
+                showDisabled=lit("Inplace"),
+                forcedSelection=lit(False),
+            ),
+            "header": obj(
+                show=lit(True), title=lit(label),
+                fontColor=solid(INK_DIM), background=solid(BG_RAIL),
+                textSize=lit(10), outline=lit("None"),
+            ),
+            "rows": obj(
+                fontColor=solid(INK), textSize=lit(10),
+                selectedColor=solid(CHICLET_ON),
+                hoverColor=solid("#D6CFC0"),
+                unselectedColor=solid(CHICLET_OFF),
+                disabledColor=solid(BG_RAIL),
+                background=solid(BG_RAIL),
+                transparency=lit(0),
+                outlineColor=solid(BORDER), outlineWeight=lit(1),
+                borderStyle=lit("Rounded"),
+                padding=lit(3), height=lit(30),
+            ),
+        },
+        container={
+            "background": obj(show=lit(False)),
+            "border": obj(show=lit(False)),
+            "dropShadow": obj(show=lit(False)),
+            "visualHeader": obj(show=lit(False)),
+            "title": obj(show=lit(False)),
+        },
+    )
+
+
 def slicer(page: str, key: str, box, label: str, entity: str, prop: str,
            blocos: bool = False) -> dict:
     """`blocos=True` renderiza cada valor como botao — o acabamento do Chiclet
@@ -543,7 +598,9 @@ def slicer(page: str, key: str, box, label: str, entity: str, prop: str,
             ),
         },
         container={
-            "background": obj(show=lit(True), color=solid(BG_CARD), transparency=lit(0)),
+            # Transparente como os demais paineis: o unico segmento que ainda e
+            # lista suspensa nao pode ser o unico com cartao branco em volta.
+            "background": obj(show=lit(False)),
             "border": obj(show=lit(True), color=solid(BORDER), radius=lit(12)),
             "dropShadow": obj(show=lit(False)),
             "visualHeader": obj(show=lit(False)),
@@ -572,13 +629,14 @@ def chrome(page: str, titulo: str, lede: str, filtros: bool = True) -> list:
         ]),
     ]
     if filtros:
-        # Regiao em blocos (5 valores empilham bem no rail); Ano e Estado
-        # continuam suspensos — 27 estados em botao nao caberiam em 168px.
-        v.append(slicer(page, "slicer_Ano", (20, 176, RAIL_W - 40, 62),
-                        "Ano", "dim_periodo", "Ano"))
-        v.append(slicer(page, "slicer_Regiao", (20, 254, RAIL_W - 40, 200),
-                        "Região", "dim_uf", "Região", blocos=True))
-        v.append(slicer(page, "slicer_Estado", (20, 470, RAIL_W - 40, 62),
+        # Ano (5 valores, rotulo curto) em duas colunas; Regiao (5 valores,
+        # rotulo longo) em uma. Estado tem 27 valores e continua suspenso — em
+        # bloco ocuparia o rail inteiro.
+        v.append(chiclet(page, "slicer_Ano", (16, 172, RAIL_W - 32, 128),
+                         "Ano", "dim_periodo", "Ano", 2))
+        v.append(chiclet(page, "slicer_Regiao", (16, 312, RAIL_W - 32, 214),
+                         "Região", "dim_uf", "Região", 1))
+        v.append(slicer(page, "slicer_Estado", (16, 538, RAIL_W - 32, 62),
                         "Estado", "dim_uf", "Estado"))
     v.append(textbox(page, "fonte", (24, PAGE_H - 132, RAIL_W - 44, 100), [
         run("FONTE\n", 9, INK_DIM, bold=True),
@@ -965,6 +1023,8 @@ def report_json() -> dict:
             "section": obj(verticalAlignment=lit("Top")),
             "outspacePane": obj(expanded=lit(False)),
         },
+        # Sem esta declaracao o Power BI ignora o pacote e o visual nao carrega.
+        "publicCustomVisuals": ["ChicletSlicer1448559807354"],
         "resourcePackages": [
             {"name": "SharedResources", "type": "SharedResources",
              "items": [{"name": "CY26SU04", "path": "BaseThemes/CY26SU04.json", "type": "BaseTheme"}]},
@@ -1023,7 +1083,9 @@ def build(src: Path, dst: Path) -> None:
     # BuiltInThemes tambem sai: ao salvar, o Desktop despeja o catalogo de temas
     # embutidos dele no arquivo (Bloom.json sozinho tem 3 MB). Nada no relatorio
     # aponta para eles e o Desktop os recria sozinho quando precisa.
-    drop_prefixes = ("Report/definition/", "Report/CustomVisuals/",
+    # Report/CustomVisuals NAO entra na lista: o pacote do Chiclet Slicer vive
+    # ali e precisa continuar no arquivo, senao o visual some do relatorio.
+    drop_prefixes = ("Report/definition/",
                      "Report/StaticResources/RegisteredResources/",
                      "Report/StaticResources/SharedResources/BuiltInThemes/")
     drop_exact = {"Report/Layout", "SecurityBindings"}
