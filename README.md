@@ -38,7 +38,7 @@ O Acre tem a pior taxa do país e o 23º maior volume: 43 mil domicílios. A Bah
 o segundo ranking atende o país inteiro em percentual e quase ninguém em gente.
 
 **O segundo achado é maior que o primeiro: a brecha deixou de ser regional.** O gap entre
-Norte+Nordeste e Sul+Sudeste é de 3,5pp. O que restou é a distância entre a cidade e o
+Norte+Nordeste e Sul+Sudeste é de 4,6pp. O que restou é a distância entre a cidade e o
 campo — **13,0pp no Brasil**, e **24,8pp no Norte**, onde o domicílio urbano tem 95,2% de
 acesso (acima da média nacional) e o rural tem 70,4%, o pior do país.
 
