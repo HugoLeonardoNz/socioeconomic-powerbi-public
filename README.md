@@ -3,10 +3,10 @@
 <div align="center">
 
 ![Power BI](https://img.shields.io/badge/Power%20BI-Desktop-F2C811?style=for-the-badge&logo=powerbi&logoColor=black)
-![DAX](https://img.shields.io/badge/DAX-24%20medidas-F2C811?style=for-the-badge)
+![DAX](https://img.shields.io/badge/DAX-26%20medidas-F2C811?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-ETL%20%2B%20report%20as%20code-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Star Schema](https://img.shields.io/badge/Modelo-Star%20Schema-8B5CF6?style=for-the-badge)
-![Dados](https://img.shields.io/badge/Dados-IBGE%20%2B%20série%20retropolada-0F5F52?style=for-the-badge)
+![Dados](https://img.shields.io/badge/Dados-IBGE%20PNAD%20observado%202016--2025-0F5F52?style=for-the-badge)
 
 **Onde está a população brasileira sem internet — e por que o ranking por percentual
 aponta para o lugar errado.**
@@ -19,32 +19,33 @@ aponta para o lugar errado.**
 
 ## O achado
 
-87,4% dos domicílios brasileiros tinham internet em 2023. Ainda assim, **26,7 milhões de
-pessoas** viviam em casas sem acesso.
+92,6% dos domicílios brasileiros tinham internet em 2023. Ainda assim, **5,7 milhões de
+domicílios seguem sem acesso** — e eles não estão onde o mapa da desigualdade sugere.
 
-E aqui está a parte que muda decisão: **São Paulo é o 3º estado com maior taxa de acesso
-e o 1º em número absoluto de pessoas desconectadas** — 3,0 milhões, mais que o Maranhão
-(1,9 mi), que é o último colocado em taxa.
+E aqui está a parte que muda decisão: **São Paulo é o 5º estado com maior taxa de acesso
+do país e o 1º em número absoluto de domicílios desconectados.** Ranking por percentual e
+ranking por volume apontam para lugares diferentes.
 
-| Estado | Penetração | Posição em taxa | Pessoas sem acesso | Posição em volume |
-|--------|-----------:|----------------:|-------------------:|------------------:|
-| São Paulo | 93,5% | 3º | 3,03 mi | **1º** |
-| Bahia | 80,3% | 21º | 2,94 mi | **2º** |
-| Minas Gerais | 88,7% | 10º | 2,42 mi | **3º** |
-| Maranhão | 73,8% | **27º** | 1,87 mi | 6º |
+| Estado | Taxa de acesso | Posição por taxa | Domicílios sem acesso | Posição por volume |
+|---|---:|---:|---:|---:|
+| São Paulo | 95,0% | 5º | 852 mil | **1º** |
+| Bahia | 89,2% | 22º | 589 mil | **2º** |
+| Minas Gerais | 92,8% | 12º | 564 mil | **3º** |
+| Acre | 84,4% | **27º** | 43 mil | 23º |
 
-Quem planeja infraestrutura com o ranking de percentual na mão vai para o estado errado.
-O painel mostra os dois critérios lado a lado justamente porque eles discordam.
+O Acre tem a pior taxa do país e o 23º maior volume: 43 mil domicílios. A Bahia anda
+**20 posições** ao trocar um critério pelo outro. Um plano de universalização que ignore
+o segundo ranking atende o país inteiro em percentual e quase ninguém em gente.
 
-**E o que explica o acesso?** O IDH do estado sozinho explica **78% da variação** de
-penetração entre as unidades da federação (r = 0,883). A brecha digital é, antes de tudo,
-um retrato da brecha social.
+**O segundo achado é maior que o primeiro: a brecha deixou de ser regional.** O gap entre
+Norte+Nordeste e Sul+Sudeste é de 3,5pp. O que restou é a distância entre a cidade e o
+campo — **13,0pp no Brasil**, e **24,8pp no Norte**, onde o domicílio urbano tem 95,2% de
+acesso (acima da média nacional) e o rural tem 70,4%, o pior do país.
 
----
+**E o que explica o acesso?** O IDH do estado explica **59% da variação** de penetração
+entre as unidades da federação (r = 0,769) — correlação forte, mas mais fraca do que já
+foi: como o acesso subiu em toda parte, a variação entre estados comprimiu.
 
-## As páginas
-
-### Taxa ou volume?
 O paradoxo em um gráfico: eixo X é a taxa de acesso, eixo Y é quanta gente está de fora.
 Os dois rankings, lado a lado, discordam.
 
@@ -77,23 +78,37 @@ não escondido no rodapé:
 | Dado | Situação |
 |------|----------|
 | Penetração por UF, **2023** | **Observado** — IBGE, PNAD Contínua |
-| Penetração por UF, **2019–2022** | **Retropolado** — aplica a variação nacional do período a cada estado |
+| Penetração por UF, **2016–2025** | **Observado** — série anual da PNAD Contínua, sem retropolação |
 | IDH por estado | **Observado** — PNUD, Atlas do Desenvolvimento Humano (censo 2010) |
 | População e densidade | **Observado** — IBGE, estimativas 2023 e Censo 2022 |
 
-**Consequência prática:** como a série anterior a 2023 é retropolada pela média nacional,
-todo estado cresce no mesmo ritmo por construção. A série serve para dar ordem de
-grandeza da evolução; **não serve** para comparar velocidade de adoção entre estados. Isso
-está dito também dentro do painel, na página de metodologia.
+**Consequência prática:** a série 2016–2025 é observada ano a ano, por estado — dá para
+comparar velocidade de adoção entre estados, o que a versão retropolada anterior não
+permitia (lá todo estado crescia no mesmo ritmo, por construção).
 
-### O recorte urbano × rural foi removido
+**2020 não existe na série.** A PNAD Contínua não coletou o módulo de TIC naquele ano por
+causa da pandemia. O ponto não é interpolado só para a linha do gráfico ficar contínua —
+o buraco é a informação. Isso está dito também na página de metodologia do painel.
 
-Ele existia. A fonte offline só sabia produzi-lo aplicando um desvio fixo sobre o total
-(+5pp urbano, −20pp rural), o que gerava um gap de **exatamente 25,0 pontos percentuais em
-todos os 27 estados, em todos os anos**. Um número que parece análise e não é: não
-distinguia estado nenhum porque foi construído para não distinguir.
+### O recorte urbano × rural voltou — e mudou de grão
 
-Preferi um indicador a menos do que um indicador falso.
+Ele tinha sido removido. A fonte offline só sabia produzi-lo aplicando um desvio fixo sobre
+o total (+5pp urbano, −20pp rural), o que gerava um gap de **exatamente 25,0 pontos
+percentuais em todos os 27 estados, em todos os anos**. Um número que parece análise e não
+é: não distinguia estado nenhum porque foi construído para não distinguir.
+
+Agora ele está de volta, observado — e é o achado mais forte do painel: **13,0pp no Brasil,
+24,8pp no Norte, 7,0pp no Centro-Oeste**. Variar entre regiões é o que faz dele um
+indicador em vez de uma decoração.
+
+Uma coisa mudou junto: **o grão**. O IBGE não publica urbano × rural por UF — a amostra da
+PNAD não sustenta o cruzamento, e a API devolve `-` para os 27 estados. O recorte existe em
+Brasil e Grandes Regiões, e é assim que ele entra no modelo: numa tabela fato **separada**
+(`fato_situacao`), não como coluna do fato de UF.
+
+Essa separação é deliberada. Enfiar um indicador de grão regional no fato de UF obrigaria a
+repetir o valor da região em cada um dos seus estados — que é exatamente a forma como a
+versão anterior produziu um "gap por UF" que não existia.
 
 ---
 
@@ -148,13 +163,13 @@ cinco vezes por estado — e no caso do IDH, um valor de 2010 fingindo série an
 
 ## Medidas
 
-24 medidas na tabela `_Medidas`, agrupadas por domínio. As que carregam decisão:
+26 medidas na tabela `_Medidas`, agrupadas por domínio. As que carregam decisão:
 
 | Medida | Por que existe |
 |--------|----------------|
-| `Penetração Brasil` | Nacional **ponderada por população** (87,4%), diferente da média simples dos 27 estados (84,9%). Os estados grandes têm mais acesso — as duas médias respondem perguntas diferentes e o painel mostra as duas. |
+| `Penetração Brasil` | Nacional **ponderada por domicílios** (92,6%), diferente da média simples dos 27 estados (91,9%). Os estados grandes têm mais acesso — as duas médias respondem perguntas diferentes e o painel mostra as duas. |
 | `Pessoas sem Acesso` | Traduz percentual de domicílios em gente. É o eixo do paradoxo taxa × volume. |
-| `Distância entre Rankings` | Quantas posições o estado se move ao trocar taxa por volume. Mede o paradoxo direto: Maranhão anda 21 posições. |
+| `Distância entre Rankings` | Quantas posições o estado se move ao trocar taxa por volume. Mede o paradoxo direto: a Bahia anda 20 posições. |
 | `Correlação IDH x Penetração` | Pearson calculado em DAX sobre o conjunto filtrado — reage ao slicer, não é número fixo no título. |
 | `Score Oportunidade` | 60% volume endereçável + 40% lacuna até 100%. Os pesos são escolha minha, declarada na página de metodologia. |
 | `Leitura da Brecha` | Narrativa que lê os próprios números e acompanha os filtros. |

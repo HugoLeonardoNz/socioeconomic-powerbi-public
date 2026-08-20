@@ -1,6 +1,6 @@
 # Medidas DAX — Brecha Digital
 
-24 medidas na tabela `_Medidas`, agrupadas em pastas numeradas por domínio. **O modelo é
+26 medidas na tabela `_Medidas`, agrupadas em pastas numeradas por domínio. **O modelo é
 a fonte da verdade**; se este documento divergir dele, o modelo está certo.
 
 ```
@@ -8,6 +8,11 @@ a fonte da verdade**; se este documento divergir dele, o modelo está certo.
 [03] Rankings     [04] Tempo         [05] Socioeconômico
 [06] Oportunidade [08] Narrativa     [09] Auxiliares
 ```
+
+O modelo tem três tabelas — `fato_indicadores`, `dim_uf` e `dim_periodo` — e mais nada.
+A **data/hora automática do Power BI está desligada**: ela cria uma tabela de datas oculta
+por coluna de data, e aqui o grão é ano, não dia. Um modelo com três tabelas deve ter três
+tabelas quando alguém abre a visão de Modelo.
 
 ### Convenções
 
@@ -44,7 +49,8 @@ RETURN
         dim_periodo[Ano] = _ano
     )
 
--- Nacional PONDERADA pela população: 87,4% em 2023.
+-- Nacional PONDERADA por domicílios: 92,6% em 2023 (IBGE publica 92,5%; a
+-- diferença é arredondamento — as tabelas do SIDRA publicam em "mil domicílios").
 -- Ignora seleção de UF de propósito, para servir de linha de base comparável.
 Penetração Brasil =
 VAR _ano = [Ano de Referência]
@@ -58,7 +64,7 @@ RETURN
         REMOVEFILTERS(dim_uf)
     )
 
--- Média simples dos 27 estados: 84,9%. Fica exposta ao lado da ponderada porque
+-- Média simples dos 27 estados: 91,9%. Fica exposta ao lado da ponderada porque
 -- a diferença de 2,5pp não é ruído — é o efeito de os estados grandes terem mais
 -- acesso, e as duas médias respondem perguntas diferentes.
 Penetração Média das UFs = ...  -- igual à de cima, sem a ponderação
@@ -143,9 +149,9 @@ Variação Anual (pp)     = ([Penetração] - [Penetração Ano Anterior]) * 100
 Avanço 2019-2023 (pp)   = ...   -- primeira contra última observação da série
 ```
 
-> Lembrete de leitura: a série 2019–2022 é retropolada pela variação nacional. Todo
-> estado cresce no mesmo ritmo **por construção** — estas medidas dão ordem de grandeza,
-> não comparação de velocidade entre estados.
+> Lembrete de leitura: a série 2016–2025 é observada ano a ano, por estado. 2020 não
+> existe (a PNAD não coletou o módulo de TIC naquele ano), então medida de variação
+> anual precisa tratar o salto 2019 → 2021 como dois anos, não um.
 
 ---
 

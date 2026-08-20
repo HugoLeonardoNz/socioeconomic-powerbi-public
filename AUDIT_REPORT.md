@@ -122,7 +122,7 @@ Reescrito reconstruindo a série com `REMOVEFILTERS(dim_uf)` + reaplicação da 
 cuidado aplicado à correlação e ao score de oportunidade.
 
 ### O dashboard
-`digital_divide_brasil.pbix` construído do zero: 5 páginas, 54 visuais, 24 medidas.
+`digital_divide_brasil.pbix` construído do zero: 5 páginas, 64 visuais, 26 medidas.
 A camada visual é gerada por **`tools/build_report.py`**, que reescreve
 `Report/definition/**` (formato PBIR) a partir de especificação declarativa.
 

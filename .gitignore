@@ -9,3 +9,6 @@ venv/
 dist/
 build/
 .DS_Store
+
+# backup que o build cria antes de reescrever o .pbix
+*.prebuild.pbix

@@ -43,9 +43,9 @@ BG_OUT = "#EBE6DC"     # area fora do canvas
 BG_PAGE = "#F5F2EC"    # papel
 BG_RAIL = "#EDE8DE"    # rail lateral
 BG_CARD = "#FFFFFF"    # superficie dos paineis
-BORDER = "#D8D0C0"     # fio de contorno (unica separacao, entao um tom acima)
+BORDER = "#E0D8C8"     # fio de contorno: discreto, porque quem separa e o cartao
 GRID = "#EDE8DE"       # linhas de grade
-BG_ALT = "#EFEBE2"     # faixa alternada das tabelas (sutil sobre o papel)
+BG_ALT = "#F6F3ED"     # faixa alternada das tabelas (sutil sobre o cartao branco)
 CHICLET_OFF = "#E7E2D7"  # bloco nao selecionado
 CHICLET_ON = "#0F5F52"   # bloco selecionado
 
@@ -75,6 +75,25 @@ FONT_TITLE = "Georgia"          # serifa: o que diferencia a peca
 FONT = "Segoe UI"
 FONT_SEMI = "Segoe UI Semibold"
 
+# ---------------------------------------------------------------------------
+# Escala de arredondamento
+# ---------------------------------------------------------------------------
+# Mesma escala do telecom-powerbi-public, de proposito: paleta e tipografia
+# separam os dois relatorios, o acabamento os une. Sao dois trabalhos da mesma
+# pessoa, e o raio de canto e assinatura, nao tema.
+#
+#   R_CHIP  bloco de filtro. O Chiclet arredonda em 10px fixos no codigo do
+#           proprio visual; a escala e ancorada nesse valor.
+#   R_CTRL  controle: botao de navegacao e segmentacao nativa.
+#   R_PANEL painel e cartao, a maior superficie da pagina.
+R_CHIP, R_CTRL, R_PANEL = 10, 14, 20
+
+# O navegador de paginas e o unico visual que nao mede o raio em pixel:
+# `shape.roundEdge` esta em pontos. NAV_ROUND e R_CTRL convertido (px x 3/4),
+# para o botao cair no mesmo degrau que o resto da escala em vez de virar um
+# numero solto no meio do visual.
+NAV_ROUND = round(R_CTRL * 3 / 4)
+
 # Grid da pagina (1920x1080) — rail a esquerda, conteudo a direita
 PAGE_W, PAGE_H = 1920, 1080
 RAIL_W = 208
@@ -82,8 +101,9 @@ MARGIN = 40
 GUTTER = 20
 CONTENT_X = RAIL_W + MARGIN                    # 248
 CONTENT_W = PAGE_W - CONTENT_X - MARGIN        # 1632
-HEAD_Y = 52
-BODY_Y = 196                                   # abaixo do titulo + linha fina
+HEAD_Y = 44
+NAV_W = 860                                    # faixa de navegacao, alinhada a direita
+BODY_Y = 196                                   # abaixo do titulo + lede
 BODY_H = PAGE_H - BODY_Y - MARGIN              # 844
 
 ENTITY_M = "_Medidas"
@@ -228,25 +248,28 @@ def sort_by_column(entity: str, prop: str, direction: str = "Ascending") -> dict
 
 def panel(title: str | None = None, subtitle: str | None = None, framed: bool = True,
           centro: bool = False) -> dict:
-    # Painel sem preenchimento: o relatorio fica sobre uma superficie continua
-    # de papel e a unica separacao e o fio. Cartao branco sobre papel creme
-    # criava blocos flutuando sobre outro bloco.
+    # Painel com preenchimento branco sobre o papel creme, canto arredondado em
+    # R_PANEL. Sem preenchimento o relatorio virava um caderno de retangulos de
+    # fio fino, todos no mesmo plano: nada dizia onde o conteudo comeca e onde e
+    # so vao. O contraste entre papel (#F5F2EC) e cartao (#FFF) e minimo de
+    # proposito — separa sem virar bloco flutuante.
     c: dict = {
-        "background": obj(show=lit(False)),
-        "border": obj(show=lit(framed), color=solid(BORDER), radius=lit(14)),
+        "background": obj(show=lit(True), color=solid(BG_CARD), transparency=lit(0)),
+        "border": obj(show=lit(framed), color=solid(BORDER), radius=lit(R_PANEL)),
         "dropShadow": obj(show=lit(False)),
         "visualHeader": obj(show=lit(False)),
     }
     if title:
         c["title"] = obj(
             show=lit(True), text=lit(title),
-            fontColor=solid(INK), background=solid(BG_PAGE),
+            fontColor=solid(INK), background=solid(BG_CARD),
             fontFamily=lit(FONT_TITLE), fontSize=lit(16),
             alignment=lit("center" if centro else "left"), titleWrap=lit(False),
         )
         c["subTitle"] = obj(
             show=lit(bool(subtitle)), text=lit(subtitle or ""),
-            fontColor=solid(INK_DIM), fontFamily=lit(FONT),
+            fontColor=solid(INK_DIM), background=solid(BG_CARD),
+            fontFamily=lit(FONT),
             fontSize=lit(11), alignment=lit("center" if centro else "left"),
             titleWrap=lit(False),
         )
@@ -305,9 +328,12 @@ def data_labels(show: bool = True, color: str = INK_MUT, font: int = 11) -> list
 
 def table_style(total: bool = False, font: int = 12) -> dict:
     return {
+        # Cabecalho um ponto acima do corpo, nunca fixo: com corpo em 9 e
+        # cabecalho em 11 o titulo da coluna truncava antes do valor
+        # ("Distância entre Rankin"), e o que sobrava era um rotulo pela metade.
         "columnHeaders": obj(
-            fontColor=solid(INK_MUT), backColor=solid(BG_PAGE),
-            fontFamily=lit(FONT_SEMI), fontSize=lit(11),
+            fontColor=solid(INK_MUT), backColor=solid(BG_CARD),
+            fontFamily=lit(FONT_SEMI), fontSize=lit(font + 1),
             outline=lit("BottomOnly"), wordWrap=lit(False),
             alignment=lit("left"),
         ),
@@ -315,7 +341,7 @@ def table_style(total: bool = False, font: int = 12) -> dict:
         # do caminho. As duas cores sao proximas de proposito — a faixa guia,
         # nao chama atencao.
         "values": obj(
-            fontColorPrimary=solid(INK), backColorPrimary=solid(BG_PAGE),
+            fontColorPrimary=solid(INK), backColorPrimary=solid(BG_CARD),
             fontColorSecondary=solid(INK), backColorSecondary=solid(BG_ALT),
             fontFamily=lit(FONT), fontSize=lit(font),
             outline=lit("None"), urlIcon=lit(False),
@@ -327,7 +353,7 @@ def table_style(total: bool = False, font: int = 12) -> dict:
             rowPadding=lit(9), textSize=lit(font),
         ),
         "total": obj(
-            totals=lit(total), fontColor=solid(INK_MUT), backColor=solid(BG_CARD),
+            totals=lit(total), fontColor=solid(INK_MUT), backColor=solid(BG_ALT),
             fontFamily=lit(FONT_SEMI), fontSize=lit(font),
         ),
     }
@@ -572,6 +598,57 @@ def chiclet(page: str, key: str, box, label: str, entity: str, prop: str,
     )
 
 
+def navigator(page: str, box) -> dict:
+    """Navegacao entre paginas, no alto do conteudo.
+
+    Fica na horizontal, ao lado do titulo, e nao no rail: o visual nativo so
+    distribui os botoes na horizontal e, num rail de 168px uteis, quebra cada
+    rotulo numa coluna de letras. Inventar um objeto `layout` para forcar a
+    vertical faz o visual inteiro nao renderizar.
+
+    O acabamento e o mesmo dos blocos de filtro do rail — bloco creme, teal
+    quando ativo — para a peca inteira ter um jeito so de dizer "selecionado".
+    """
+    return visual(
+        page, "nav", "pageNavigator", box,
+        objects={
+            # O raio do botao e `shape.shapeRounding`, nao `roundedCornerRadius`
+            # (esse existe, mas e do plano de fundo do visual). Propriedade
+            # desconhecida nao da erro: o Power BI ignora em silencio, e os
+            # botoes saiam de canto vivo no meio de uma pagina toda arredondada.
+            "shape": [{"properties": {"roundEdge": lit(NAV_ROUND)},
+                       "selector": {"id": "default"}}],
+            "text": [
+                {"properties": {"fontColor": solid(INK_MUT), "fontFamily": lit(FONT),
+                                "fontSize": lit(11)},
+                 "selector": {"id": "default"}},
+                {"properties": {"fontColor": solid(BG_CARD), "fontFamily": lit(FONT_SEMI),
+                                "fontSize": lit(11)},
+                 "selector": {"id": "selected"}},
+            ],
+            "fill": [
+                {"properties": {"show": lit(True), "fillColor": solid(CHICLET_OFF),
+                                "transparency": lit(0)},
+                 "selector": {"id": "default"}},
+                {"properties": {"show": lit(True), "fillColor": solid("#D6CFC0"),
+                                "transparency": lit(0)},
+                 "selector": {"id": "hover"}},
+                {"properties": {"show": lit(True), "fillColor": solid(CHICLET_ON),
+                                "transparency": lit(0)},
+                 "selector": {"id": "selected"}},
+            ],
+            "outline": [
+                {"properties": {"show": lit(True), "lineColor": solid(BORDER),
+                                "weight": lit(1)},
+                 "selector": {"id": "default"}},
+                {"properties": {"show": lit(False)}, "selector": {"id": "selected"}},
+            ],
+            "grid": obj(padding=lit(8)),
+        },
+        container=bare(),
+    )
+
+
 def slicer(page: str, key: str, box, label: str, entity: str, prop: str,
            blocos: bool = False) -> dict:
     """`blocos=True` renderiza cada valor como botao — o acabamento do Chiclet
@@ -601,7 +678,7 @@ def slicer(page: str, key: str, box, label: str, entity: str, prop: str,
             # Transparente como os demais paineis: o unico segmento que ainda e
             # lista suspensa nao pode ser o unico com cartao branco em volta.
             "background": obj(show=lit(False)),
-            "border": obj(show=lit(True), color=solid(BORDER), radius=lit(12)),
+            "border": obj(show=lit(True), color=solid(BORDER), radius=lit(R_CTRL)),
             "dropShadow": obj(show=lit(False)),
             "visualHeader": obj(show=lit(False)),
             "title": obj(show=lit(False)),
@@ -614,12 +691,10 @@ def slicer(page: str, key: str, box, label: str, entity: str, prop: str,
 # ---------------------------------------------------------------------------
 
 def chrome(page: str, titulo: str, lede: str, filtros: bool = True) -> list:
-    """Rail lateral: marca, filtros e fonte.
+    """Rail lateral (marca, filtros, fonte) + cabecalho editorial com navegacao.
 
-    Sem navegador de paginas: o visual nativo do Power BI so distribui os botoes
-    na horizontal, e dentro de um rail estreito ele quebra cada rotulo numa
-    coluna de letras. A navegacao fica nas abas nativas do rodape, que todo
-    usuario de Power BI ja conhece.
+    A navegacao entre paginas fica no alto do conteudo, alinhada a direita, na
+    mesma linha do titulo — ver `navigator` para o porque de nao ficar no rail.
     """
     v = [
         block(page, "rail", (0, 0, RAIL_W, PAGE_H), BG_RAIL),
@@ -643,13 +718,19 @@ def chrome(page: str, titulo: str, lede: str, filtros: bool = True) -> list:
                          "Estado", "dim_uf", "Estado", 1))
     v.append(textbox(page, "fonte", (24, PAGE_H - 132, RAIL_W - 44, 100), [
         run("FONTE\n", 9, INK_DIM, bold=True),
-        run("IBGE · PNAD Contínua\nPNUD · Atlas do IDH\nSérie 2019–2022 retropolada", 9, INK_DIM),
+        run("IBGE · PNAD Contínua\nSIDRA 9649 · 7311 · 7167\nPNUD · Atlas do IDH\nSérie observada 2016–2025", 9, INK_DIM),
     ]))
 
-    # Cabecalho editorial: titulo em serifa + linha de apoio
-    v.append(textbox(page, "titulo", (CONTENT_X, HEAD_Y, CONTENT_W, 116), [
+    # Cabecalho editorial: titulo em serifa na primeira linha, navegacao no fim
+    # dela, lede numa linha propria abaixo. Titulo e lede em caixas separadas
+    # porque a navegacao ocupa a direita da primeira linha e o lede precisa da
+    # largura inteira — junto, o texto passava por baixo dos botoes.
+    v.append(textbox(page, "titulo", (CONTENT_X, HEAD_Y, CONTENT_W - NAV_W - 24, 54), [
         run(titulo, 30, INK, bold=True, font=FONT_TITLE),
-        run("\n" + lede, 13, INK_MUT),
+    ]))
+    v.append(navigator(page, (CONTENT_X + CONTENT_W - NAV_W, HEAD_Y + 4, NAV_W, 42)))
+    v.append(textbox(page, "lede", (CONTENT_X, HEAD_Y + 60, CONTENT_W, 56), [
+        run(lede, 13, INK_MUT),
     ]))
     return v
 
@@ -664,7 +745,7 @@ def page_brecha() -> tuple[str, list]:
                "87% dos domicílios brasileiros têm internet. O que esse número esconde é onde estão os 13% que não têm.")
 
     # Faixa de indicadores
-    stat_y, stat_h = BODY_Y, 128
+    stat_y, stat_h = BODY_Y, 116
     for (x, w), (key, label, measure, color, note, prec) in zip(cols(4), [
         ("s1", "PENETRAÇÃO NACIONAL", "Penetração Brasil", TEAL, "ponderada por população", None),
         ("s2", "PESSOAS SEM ACESSO", "Pessoas sem Acesso", AMBER, "vivem em domicílios sem internet", 1),
@@ -695,20 +776,24 @@ def page_brecha() -> tuple[str, list]:
                   "penetração nacional ponderada, por ano",
                   "dim_periodo", "Ano", ["Penetração Brasil"], [TEAL], start=0.7))
 
-    # Coluna, e nao barra deitada: 27 estados nao cabem na vertical do painel
-    # (o visual cria barra de rolagem e joga o rotulo para dentro da barra).
-    # Em coluna, a ordenacao e a inclinacao do conjunto ficam legiveis de uma
-    # vez; o valor exato de cada estado sai na dica de contexto e na tabela da
-    # pagina "O que explica".
+    # O que a coluna mostra e a LACUNA, nao a penetracao. Penetracao por estado
+    # vai de 73,8% a 95,1%: em barra ancorada no zero sao 27 colunas quase
+    # identicas, e a diferenca que a pagina inteira discute fica invisivel.
+    # Truncar o eixo resolveria o desenho e estragaria a leitura — barra mede
+    # comprimento, e comprimento com base falsa mente. A lacuna (100% − acesso)
+    # e o mesmo dado pelo complemento, comeca no zero por natureza e varia de
+    # 4,9% a 26,2%: cinco vezes mais amplitude, sem nenhum truque de eixo. E e
+    # literalmente o assunto do lede — onde estao os 13%.
+    # Coluna, e nao barra deitada: 27 estados nao cabem na vertical do painel.
     v.append(bar(p, "por_uf", (xb, top, wb, h),
-                 "Penetração por estado",
-                 "ordenado do maior para o menor · cor por região",
-                 "dim_uf", "UF", "Penetração",
+                 "Quanto falta em cada estado",
+                 "% de domicílios sem internet · ordenado do maior para o menor · cor por região",
+                 "dim_uf", "UF", "Lacuna até 100%",
                  vtype="clusteredColumnChart",
                  points=category_colors("dim_uf", "Região", REGIAO),
                  series=("dim_uf", "Região"),
                  labels=False, legend_pos="Bottom"))
-    return "A brecha em números", v
+    return "A brecha", v
 
 
 def page_paradoxo() -> tuple[str, list]:
@@ -725,6 +810,9 @@ def page_paradoxo() -> tuple[str, list]:
                      points=category_colors("dim_uf", "Região", REGIAO),
                      series=("dim_uf", "Região")))
 
+    # font=9: sao cinco colunas em 800px e o nome das medidas e longo. Em 10 o
+    # cabecalho truncava no meio da palavra ("Distância entre Rankin") e o
+    # painel ganhava barra de rolagem horizontal.
     (xa, wa), (xb, wb) = split_x(1, 1)
     v.append(table(p, "rk_taxa", (xa, r[1][0], wa, r[1][1]),
                    "Ranking por taxa de acesso",
@@ -732,7 +820,7 @@ def page_paradoxo() -> tuple[str, list]:
                    [("col", "dim_uf", "Estado"), ("mea", "Penetração"),
                     ("mea", "Ranking Penetração"), ("mea", "Ranking Volume sem Acesso"),
                     ("mea", "Distância entre Rankings")],
-                   sort=sort_by_measure("Penetração", "Ascending")))
+                   sort=sort_by_measure("Penetração", "Ascending"), font=9))
 
     v.append(table(p, "rk_vol", (xb, r[1][0], wb, r[1][1]),
                    "Ranking por volume desconectado",
@@ -740,8 +828,8 @@ def page_paradoxo() -> tuple[str, list]:
                    [("col", "dim_uf", "Estado"), ("mea", "Pessoas sem Acesso"),
                     ("mea", "Ranking Volume sem Acesso"), ("mea", "Ranking Penetração"),
                     ("mea", "Distância entre Rankings")],
-                   sort=sort_by_measure("Pessoas sem Acesso")))
-    return "Taxa ou volume?", v
+                   sort=sort_by_measure("Pessoas sem Acesso"), font=9))
+    return "Taxa ou volume", v
 
 
 def page_explica() -> tuple[str, list]:
@@ -797,11 +885,15 @@ def page_oportunidade() -> tuple[str, list]:
                  "dim_uf", "UF", "Score Oportunidade",
                  color=TEAL, vtype="clusteredColumnChart", labels=False))
 
+    # Por regiao, e nao por estado. O score e 60% volume, e volume por estado
+    # era justamente o grafico do lado: as duas colunas saiam com o mesmo
+    # desenho, uma explicando a outra em vez de acrescentar. Somado por regiao,
+    # o mesmo dado responde outra pergunta — de que lado do pais esta o mercado.
     v.append(bar(p, "mercado", (xb, r[0][0], wb, r[0][1]),
-                 "Mercado endereçável",
-                 "domicílios sem internet, por estado",
-                 "dim_uf", "UF", "Domicílios sem Internet",
-                 color=AMBER, vtype="clusteredColumnChart", labels=False))
+                 "Onde o mercado se concentra",
+                 "domicílios sem internet somados por região",
+                 "dim_uf", "Região", "Domicílios sem Internet",
+                 points=category_colors("dim_uf", "Região", REGIAO)))
 
     v.append(table(p, "fila", (CONTENT_X, r[1][0], CONTENT_W, r[1][1]),
                    "Fila de prioridade",
@@ -828,7 +920,7 @@ def page_metodo() -> tuple[str, list]:
     # A pagina de metodologia nao tem filtros no rail, entao nao herda o recuo
     # que existe para eles: o conteudo sobe.
     H_BLOCOS, H_NOTAS = 452, 320
-    y0 = HEAD_Y + 116
+    y0 = HEAD_Y + 124
     r = [(y0, H_BLOCOS), (y0 + H_BLOCOS + GUTTER, H_NOTAS)]
     c3 = cols(3)
 
@@ -882,15 +974,19 @@ def page_metodo() -> tuple[str, list]:
          "Não há velocidade, preço, tecnologia nem qualidade de conexão. \"Ter "
          "internet no domicílio\" inclui do 4G compartilhado à fibra de 500 mega "
          "— duas realidades que o indicador trata como iguais."),
-        ("Por que não existe recorte urbano × rural",
-         "Existia, e foi removido. A fonte offline só sabia produzi-lo com desvio "
-         "fixo sobre o total (+5pp urbano, −20pp rural), gerando um gap de "
-         "exatamente 25,0 pontos em todos os 27 estados. Um número que parece "
-         "análise e não é: foi construído para não distinguir estado nenhum."),
-        ("Consequência para a leitura da série",
-         "Como 2019–2022 é retropolado pela média nacional, todo estado cresce no "
-         "mesmo ritmo por construção. A série dá ordem de grandeza da evolução; "
-         "não serve para comparar velocidade de adoção entre estados."),
+        ("Por que o recorte urbano × rural é por REGIÃO, e não por estado",
+         "O IBGE não publica esse cruzamento por UF — a amostra da PNAD não o "
+         "sustenta, e a API devolve \"-\" para os 27 estados. O indicador existe "
+         "em Brasil e Grandes Regiões, e é nesse grão que ele aparece aqui. Uma "
+         "versão anterior deste painel mostrava um gap POR ESTADO: ele era "
+         "construído com desvio fixo (+5pp urbano, −20pp rural) e dava exatamente "
+         "25,0 pontos nos 27 estados — o dado falso existia em qualquer grão "
+         "porque não vinha de lugar nenhum."),
+        ("O que a série cobre",
+         "2016 a 2025, observada ano a ano e por estado. 2020 não existe: a PNAD "
+         "Contínua não coletou o módulo de TIC naquele ano por causa da pandemia, "
+         "e o ponto não foi interpolado para a linha ficar contínua. Medida de "
+         "variação anual precisa tratar o salto 2019 → 2021 como dois anos."),
     ]
     runs = []
     for i, (rot, txt) in enumerate(limites):
@@ -942,7 +1038,9 @@ def build_theme() -> dict:
             "*": {
                 "*": {
                     "background": [{"show": True, "color": {"solid": {"color": BG_CARD}}, "transparency": 0}],
-                    "border": [{"show": True, "color": {"solid": {"color": BORDER}}, "radius": 2}],
+                    # Mesmo R_PANEL do gerador: o tema e o que vale para
+                    # qualquer visual acrescentado depois no Desktop.
+                    "border": [{"show": True, "color": {"solid": {"color": BORDER}}, "radius": R_PANEL}],
                     "dropShadow": [{"show": False}],
                     "visualHeader": [{"show": False}],
                     "title": [{
@@ -1102,6 +1200,19 @@ def build(src: Path, dst: Path) -> None:
         keep = [i for i in zin.infolist()
                 if not i.filename.startswith(drop_prefixes) and i.filename not in drop_exact]
         payload = {i.filename: zin.read(i.filename) for i in keep}
+
+    # A visao de Modelo herdou as posicoes de tabela do relatorio de telecom —
+    # este .pbix nasceu daquele arquivo e o DiagramLayout veio junto, com nos
+    # chamados dim_calendario, dim_operadora e fato_reclamacoes, que nao existem
+    # neste modelo. O Desktop ignora no que nao casa com tabela e posiciona as
+    # tabelas reais sozinho, entao o efeito e so um resto de historia dentro do
+    # arquivo.
+    #
+    # NAO tente limpar isso reescrevendo a parte com `"nodes": []`: o Desktop
+    # recusa o arquivo inteiro com "esse arquivo esta corrompido ou foi criado
+    # por uma versao nao reconhecida" — a mesma mensagem sem pista que o
+    # SecurityBindings da. Um diagrama sem no nenhum, num modelo que tem tabela,
+    # e estado invalido. A parte fica como esta.
 
     content_types = payload.pop("[Content_Types].xml", None)
     if content_types:
