@@ -27,16 +27,22 @@ tabelas quando alguém abre a visão de Modelo.
 ## [00] Parâmetros
 
 ```dax
--- Sai do próprio modelo: população sobre total de domicílios do ano. Era a
--- constante 3,1 escrita à mão; os dados do painel implicam 2,78 em 2023 e 2,66
--- em 2025, então a constante inflava em ~11% toda conversão de domicílio para
--- gente. Constante que ninguém reconfere envelhece calada.
+-- Sai do próprio modelo: população sobre total de domicílios (2,66). Era a
+-- constante 3,1 escrita à mão, que inflava em ~11% toda conversão de domicílio
+-- para gente. Constante que ninguém reconfere envelhece calada.
+--
+-- O denominador NÃO acompanha o ano selecionado, de propósito: `dim_uf[População]`
+-- é uma estimativa vigente e não tem série histórica. Pareá-la com os domicílios
+-- de 2019 misturava numerador de um ano com denominador de outro e devolvia 3,04
+-- moradores — a narrativa chegou a dizer "34,3 milhões de pessoas" para 2019,
+-- contra 30,0 reais. Como razão fixa, vira premissa declarada em vez de artefato.
 Moradores por Domicílio =
-VAR _ano = [Ano de Referência]
+VAR _ultimo = CALCULATE(MAX(dim_periodo[Ano]), REMOVEFILTERS(dim_periodo))
 RETURN
     DIVIDE(
         CALCULATE(SUM(dim_uf[População]), REMOVEFILTERS(dim_periodo)),
-        CALCULATE(SUM(fato_indicadores[domicilios_total]) * 1000, dim_periodo[Ano] = _ano)
+        CALCULATE(SUM(fato_indicadores[domicilios_total]) * 1000,
+                  REMOVEFILTERS(dim_periodo), dim_periodo[Ano] = _ultimo)
     )
 
 -- Âncora temporal de todas as medidas de estoque. Num cartão sem filtro devolve
@@ -243,17 +249,25 @@ não publica o cruzamento por UF — a amostra da PNAD não sustenta, e a API de
 para os 27 estados. O indicador existe em Brasil e Grandes Regiões.
 
 ```dax
--- Sem Local selecionado, lê o Brasil explicitamente. Somar Brasil + as 5 regiões
+-- Três níveis de escopo, nesta ordem: Local selecionado → região selecionada no
+-- rail → Brasil. O nível do meio existe porque `fato_situacao` NÃO tem relação com
+-- `dim_uf` (o grão é outro), então o slicer de região não alcança a tabela sozinho:
+-- sem a ponte, o painel mostrava o gap do BRASIL (7,8pp) com "Norte" selecionado,
+-- onde o correto é 13,2pp.
+--
+-- E o fallback é `Escopo = "Brasil"` explicitamente: somar Brasil + as 5 regiões
 -- devolveria o número certo por acidente (as regiões somam o Brasil, então a razão
 -- se preserva) — e depender de acidente é como este painel já errou antes.
 Penetração Urbana =
 VAR _ano = [Ano de Referência]
+VAR _reg = IF(HASONEVALUE(dim_uf[Região]), SELECTEDVALUE(dim_uf[Região]))
 RETURN
     CALCULATE(
         DIVIDE(SUM(fato_situacao[domicilios_com_internet]), SUM(fato_situacao[domicilios_total])),
         fato_situacao[Situação] = "Urbana",
         fato_situacao[Ano] = _ano,
-        IF(ISFILTERED(fato_situacao[Local]), TRUE(), fato_situacao[Escopo] = "Brasil"),
+        IF(ISFILTERED(fato_situacao[Local]), TRUE(),
+           IF(NOT ISBLANK(_reg), fato_situacao[Local] = _reg, fato_situacao[Escopo] = "Brasil")),
         REMOVEFILTERS(dim_uf)
     )
 
@@ -272,6 +286,17 @@ RETURN IF(NOT ISBLANK(_u) && NOT ISBLANK(_r), (_u - _r) * 100)
 > exatamente 25,0pp em todo estado e todo ano, porque era desvio fixo (+5pp urbano,
 > −20pp rural) aplicado sobre o total. Número que não distingue ninguém não é indicador,
 > é decoração.
+
+---
+
+> **VAR não usada não é inofensiva.** Uma versão desta medida carregava uma
+> `VAR _escopo = IF(ISFILTERED(fato_situacao[Local]), fato_situacao[Local], "Brasil")`
+> que sobrou de uma reescrita e não aparecia no `RETURN`. O DAX avalia VAR sob
+> demanda, então toda consulta devolvia o valor certo — mas o validador do modelo
+> marcava `SemanticError` (coluna sem agregação), o erro se propagava por
+> dependência até `Leitura da Brecha`, e o Power BI Desktop mostrava o cartão
+> quebrado. Testar por consulta não pega isso: `INFO.MEASURES()` filtrando
+> `[State] <> 1` pega.
 
 ---
 
