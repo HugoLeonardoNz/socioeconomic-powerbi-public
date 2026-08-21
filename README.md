@@ -3,7 +3,7 @@
 <div align="center">
 
 ![Power BI](https://img.shields.io/badge/Power%20BI-Desktop-F2C811?style=for-the-badge&logo=powerbi&logoColor=black)
-![DAX](https://img.shields.io/badge/DAX-26%20medidas-F2C811?style=for-the-badge)
+![DAX](https://img.shields.io/badge/DAX-29%20medidas-F2C811?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-ETL%20%2B%20report%20as%20code-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Star Schema](https://img.shields.io/badge/Modelo-Star%20Schema-8B5CF6?style=for-the-badge)
 ![Dados](https://img.shields.io/badge/Dados-IBGE%20PNAD%20observado%202016--2025-0F5F52?style=for-the-badge)
@@ -19,7 +19,7 @@ aponta para o lugar errado.**
 
 ## O achado
 
-92,6% dos domicílios brasileiros tinham internet em 2023. Ainda assim, **5,7 milhões de
+95,0% dos domicílios brasileiros tinham internet em 2025. Ainda assim, **4,0 milhões de
 domicílios seguem sem acesso** — e eles não estão onde o mapa da desigualdade sugere.
 
 E aqui está a parte que muda decisão: **São Paulo é o 5º estado com maior taxa de acesso
@@ -28,23 +28,38 @@ ranking por volume apontam para lugares diferentes.
 
 | Estado | Taxa de acesso | Posição por taxa | Domicílios sem acesso | Posição por volume |
 |---|---:|---:|---:|---:|
-| São Paulo | 95,0% | 5º | 852 mil | **1º** |
-| Bahia | 89,2% | 22º | 589 mil | **2º** |
-| Minas Gerais | 92,8% | 12º | 564 mil | **3º** |
-| Acre | 84,4% | **27º** | 43 mil | 23º |
+| São Paulo | 96,6% | 5º | 606 mil | **1º** |
+| Minas Gerais | 94,5% | 15º | 445 mil | **2º** |
+| Bahia | 92,7% | 22º | 416 mil | **3º** |
+| Acre | 90,6% | **27º** | 28 mil | 23º |
 
-O Acre tem a pior taxa do país e o 23º maior volume: 43 mil domicílios. A Bahia anda
-**20 posições** ao trocar um critério pelo outro. Um plano de universalização que ignore
+O Acre tem a pior taxa do país e o 23º maior volume: 28 mil domicílios. A Bahia anda
+**19 posições** ao trocar um critério pelo outro. Um plano de universalização que ignore
 o segundo ranking atende o país inteiro em percentual e quase ninguém em gente.
 
-**O segundo achado é maior que o primeiro: a brecha deixou de ser regional.** O gap entre
-Norte+Nordeste e Sul+Sudeste é de 4,6pp. O que restou é a distância entre a cidade e o
-campo — **13,0pp no Brasil**, e **24,8pp no Norte**, onde o domicílio urbano tem 95,2% de
-acesso (acima da média nacional) e o rural tem 70,4%, o pior do país.
+**O segundo achado é maior que o primeiro: a brecha entre estados praticamente fechou.**
+O desvio-padrão da penetração entre as 27 unidades caiu de **9,6pp em 2016 para 1,9pp em
+2025**, e a distância entre o melhor e o pior estado, de 21,3pp para 7,7pp. O gap entre
+Norte+Nordeste e Sul+Sudeste é de **2,8pp** — era 4,6pp em 2023.
 
-**E o que explica o acesso?** O IDH do estado explica **59% da variação** de penetração
-entre as unidades da federação (r = 0,769) — correlação forte, mas mais fraca do que já
-foi: como o acesso subiu em toda parte, a variação entre estados comprimiu.
+O que restou é a distância entre a cidade e o campo: **7,8pp no Brasil**, e **13,1pp no
+Norte**, onde o domicílio urbano tem 96,4% de acesso (acima da média nacional) e o rural
+tem 83,3%, o pior do país. No Centro-Oeste esse mesmo gap é de 1,8pp. Para um ISP, o
+Norte não é praça urbana a cobrir — é obra rural.
+
+**E o que explica o acesso?** O IDH do estado explica **69% da variação** de penetração
+entre as unidades da federação (r = 0,829). Aqui vale uma ressalva contra a leitura
+fácil: **a correlação não caiu de forma constante** — foi 0,894 em 2018, desceu a 0,769
+em 2023 e voltou a 0,829 em 2025. Quem olhasse só dois anos concluiria uma tendência que
+a série inteira não mostra. O que caiu sem parar foi a **dispersão**: o IDH continua
+explicando quase tudo do que sobrou de variação entre estados; o que mudou é que sobrou
+pouca variação.
+
+> **Por que 2025 e não 2023?** O painel se ancora sempre no último ano observado da série.
+> O ano de **2023 continua sendo a referência de validação do método**, porque é o ano em
+> que dá para conferir a conta contra o release publicado do IBGE (92,6% calculado aqui
+> contra 92,5% publicado). Todo número deste README pode ser reproduzido para qualquer
+> ano da série mudando o filtro de ano no painel.
 
 O paradoxo em um gráfico: eixo X é a taxa de acesso, eixo Y é quanta gente está de fora.
 Os dois rankings, lado a lado, discordam.
@@ -77,7 +92,7 @@ não escondido no rodapé:
 
 | Dado | Situação |
 |------|----------|
-| Penetração por UF, **2023** | **Observado** — IBGE, PNAD Contínua |
+| Penetração por UF, **2025** (último ano) | **Observado** — IBGE, PNAD Contínua |
 | Penetração por UF, **2016–2025** | **Observado** — série anual da PNAD Contínua, sem retropolação |
 | IDH por estado | **Observado** — PNUD, Atlas do Desenvolvimento Humano (censo 2010) |
 | População e densidade | **Observado** — IBGE, estimativas 2023 e Censo 2022 |
@@ -97,8 +112,8 @@ o total (+5pp urbano, −20pp rural), o que gerava um gap de **exatamente 25,0 p
 percentuais em todos os 27 estados, em todos os anos**. Um número que parece análise e não
 é: não distinguia estado nenhum porque foi construído para não distinguir.
 
-Agora ele está de volta, observado — e é o achado mais forte do painel: **13,0pp no Brasil,
-24,8pp no Norte, 7,0pp no Centro-Oeste**. Variar entre regiões é o que faz dele um
+Agora ele está de volta, observado — e é o achado mais forte do painel: em 2025, **7,8pp
+no Brasil, 13,1pp no Norte, 1,8pp no Centro-Oeste** (em 2023 eram 13,0 / 24,8 / 7,0). Variar entre regiões é o que faz dele um
 indicador em vez de uma decoração.
 
 Uma coisa mudou junto: **o grão**. O IBGE não publica urbano × rural por UF — a amostra da
@@ -163,11 +178,11 @@ cinco vezes por estado — e no caso do IDH, um valor de 2010 fingindo série an
 
 ## Medidas
 
-26 medidas na tabela `_Medidas`, agrupadas por domínio. As que carregam decisão:
+29 medidas na tabela `_Medidas`, agrupadas por domínio. As que carregam decisão:
 
 | Medida | Por que existe |
 |--------|----------------|
-| `Penetração Brasil` | Nacional **ponderada por domicílios** (92,6%), diferente da média simples dos 27 estados (91,9%). Os estados grandes têm mais acesso — as duas médias respondem perguntas diferentes e o painel mostra as duas. |
+| `Penetração Brasil` | Nacional **ponderada por domicílios**: 95,0% em 2025, contra 94,6% da média simples dos 27 estados. É a razão entre duas somas observadas — o método do próprio IBGE, e por isso bate com o release (92,6% contra 92,5% em 2023). As duas médias respondem perguntas diferentes e o painel mostra as duas. |
 | `Pessoas sem Acesso` | Traduz percentual de domicílios em gente. É o eixo do paradoxo taxa × volume. |
 | `Distância entre Rankings` | Quantas posições o estado se move ao trocar taxa por volume. Mede o paradoxo direto: a Bahia anda 20 posições. |
 | `Correlação IDH x Penetração` | Pearson calculado em DAX sobre o conjunto filtrado — reage ao slicer, não é número fixo no título. |

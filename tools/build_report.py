@@ -700,7 +700,7 @@ def chrome(page: str, titulo: str, lede: str, filtros: bool = True) -> list:
         block(page, "rail", (0, 0, RAIL_W, PAGE_H), BG_RAIL),
         textbox(page, "marca", (28, 44, RAIL_W - 44, 76), [
             run("BRECHA\nDIGITAL", 15, TEAL, bold=True, font=FONT_TITLE),
-            run("\nBrasil · 2019–2023", 9, INK_DIM),
+            run("\nBrasil · 2016–2025", 9, INK_DIM),
         ]),
     ]
     if filtros:
@@ -742,15 +742,21 @@ def chrome(page: str, titulo: str, lede: str, filtros: bool = True) -> list:
 def page_brecha() -> tuple[str, list]:
     p = "brecha"
     v = chrome(p, "A brecha em números",
-               "87% dos domicílios brasileiros têm internet. O que esse número esconde é onde estão os 13% que não têm.")
+               "95,0% dos domicílios brasileiros tinham internet em 2025. O que esse número esconde é onde estão os 5% que não têm — e eles não estão onde o mapa da desigualdade sugere.")
 
     # Faixa de indicadores
-    stat_y, stat_h = BODY_Y, 116
+    # 144 e nao 116: o cartao divide a altura com o titulo (16pt Georgia) e o
+    # subtitulo (11pt) do painel, e o visual "card" do Power BI nao encolhe o
+    # numero para caber — ele corta. Em 116 a base dos digitos e a virgula de
+    # "87,4%" saiam raspadas pela borda. Conta: 34pt x 1,33 px/pt x 1,2 de
+    # entrelinha = 54px do numero, mais ~26 do titulo, ~18 do subtitulo e ~22
+    # de respiro do painel.
+    stat_y, stat_h = BODY_Y, 144
     for (x, w), (key, label, measure, color, note, prec) in zip(cols(4), [
-        ("s1", "PENETRAÇÃO NACIONAL", "Penetração Brasil", TEAL, "ponderada por população", None),
-        ("s2", "PESSOAS SEM ACESSO", "Pessoas sem Acesso", AMBER, "vivem em domicílios sem internet", 1),
+        ("s1", "PENETRAÇÃO NACIONAL", "Penetração Brasil", TEAL, "ponderada por domicílios", None),
+        ("s2", "DOMICÍLIOS SEM ACESSO", "Domicílios sem Internet", AMBER, "observado, não estimado", 1),
         ("s3", "AMPLITUDE ENTRE ESTADOS", "Amplitude entre UFs (pp)", BRICK, "do melhor ao pior, em pontos", None),
-        ("s4", "AVANÇO NO PERÍODO", "Avanço 2019-2023 (pp)", SLATE, "pontos ganhos desde 2019", None),
+        ("s4", "AVANÇO NO PERÍODO", "Avanço no Período (pp)", SLATE, "primeira contra última observação", None),
     ]):
         v.append(stat(p, key, (x, stat_y, w, stat_h), label, measure, color, note, precision=prec))
 
@@ -799,7 +805,7 @@ def page_brecha() -> tuple[str, list]:
 def page_paradoxo() -> tuple[str, list]:
     p = "paradoxo"
     v = chrome(p, "Taxa ou volume?",
-               "São Paulo é o 3º estado com maior acesso e o 1º em número de pessoas desconectadas. Os dois rankings apontam para lugares diferentes — e planejar expansão exige olhar os dois.")
+               "São Paulo é o 5º estado com maior acesso e o 1º em número de domicílios desconectados. Os dois rankings apontam para lugares diferentes — e planejar expansão exige olhar os dois.")
 
     r = split(3, 2)
     v.append(scatter(p, "disp", (CONTENT_X, r[0][0], CONTENT_W, r[0][1]),
@@ -835,7 +841,7 @@ def page_paradoxo() -> tuple[str, list]:
 def page_explica() -> tuple[str, list]:
     p = "explica"
     v = chrome(p, "O que explica o acesso",
-               "O IDH do estado sozinho explica 78% da variação de penetração entre as unidades da federação. A brecha digital é, antes de tudo, um retrato da brecha social.")
+               "O IDH do estado sozinho explica 69% da variação de penetração que ainda existe entre as unidades da federação — e essa variação encolheu de 9,6pp de desvio em 2016 para 1,9pp em 2025.")
 
     r = split(3, 2)
     (xa, wa), (xb, wb) = split_x(2, 1)
@@ -926,10 +932,12 @@ def page_metodo() -> tuple[str, list]:
 
     blocos = [
         ("Origem do dado", [
-            ("Penetração 2023", "IBGE · PNAD Contínua: proporção de domicílios com acesso à internet, "
-                                "por unidade da federação. Observado."),
-            ("Série 2019–2022", "RETROPOLADA. Só 2023 é observado por estado; os anos anteriores "
-                                "aplicam a variação nacional a cada UF."),
+            ("Penetração por UF", "IBGE · PNAD Contínua: razão entre domicílios com internet "
+                                 "(tabelas SIDRA 9649 e 7311) e total de domicílios (7167), no mesmo "
+                                 "grão. Observado — não existe tabela pronta de percentual."),
+            ("Série 2016–2025", "Observada ano a ano, por estado, sem retropolação. Dá para comparar "
+                                "velocidade de adoção entre estados, o que a versão anterior "
+                                "(2019–2022 retropolada) não permitia."),
             ("IDH", "PNUD · Atlas do Desenvolvimento Humano, censo 2010. É constante na "
                     "série — não existe IDH anual por estado."),
             ("População e densidade", "IBGE · estimativas 2023 e Censo 2022. Observados."),
@@ -945,12 +953,14 @@ def page_metodo() -> tuple[str, list]:
                        "ganho de modelagem."),
         ]),
         ("Como ler os números", [
-            ("Duas médias diferentes", "A média simples dos 27 estados dá 84,9%; a ponderada por população, "
-                                       "87,4%. A diferença existe porque os estados grandes têm "
-                                       "mais acesso. O painel usa a ponderada."),
-            ("Pessoas sem acesso", "Leitura em gente do percentual de domicílios, assumindo domicílio "
-                                   "uniforme (3,1 moradores, PNAD 2023). Não é contagem "
-                                   "individual."),
+            ("Duas médias diferentes", "Em 2025 a média simples dos 27 estados dá 94,6%; a ponderada por "
+                                       "domicílios, 95,0%. A ponderada é o método do próprio IBGE e "
+                                       "bate com o release da PNAD TIC. O painel usa a ponderada."),
+            ("Pessoas sem acesso", "Leitura em gente do número de domicílios, assumindo domicílio "
+                                   "uniforme. Os moradores por domicílio saem do próprio modelo "
+                                   "(2,66 em 2025) e não de uma constante escrita à mão — a "
+                                   "anterior, 3,1, inflava a conversão em 11%. Não é contagem "
+                                   "individual: o KPI da página 1 é o domicílio, que é o observado."),
             ("Score de oportunidade", "Ponderação escolhida por mim: 60% volume, 40% lacuna. Muda a fila se "
                                       "mudarem os pesos — por isso está declarado."),
         ]),

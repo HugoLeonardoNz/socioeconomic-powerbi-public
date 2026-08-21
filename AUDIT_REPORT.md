@@ -8,7 +8,7 @@
 
 ## Resumo do Projeto
 
-Dashboard Power BI sobre penetração de internet no Brasil 2019–2023 com dados do IBGE PNAD Contínua. Analisa a brecha digital urbano-rural, CAGR de 5 anos por UF e identifica oportunidades de expansão via Score composto (baixa penetração × população × IDH moderado). Star schema com 5 tabelas.
+Dashboard Power BI sobre penetração de internet no Brasil, 2016–2025, com dado observado do IBGE PNAD Contínua (SIDRA 9649/7311/7167). Mostra que a desigualdade entre estados praticamente fechou e que o que sobrou é cidade × campo, separa ranking por taxa de ranking por volume, e prioriza expansão com um score declarado. Star schema com quatro tabelas: `fato_indicadores` (UF × ano), `fato_situacao` (urbano × rural, grão Brasil/Região), `dim_uf` e `dim_periodo`.
 
 ---
 
@@ -57,11 +57,15 @@ socioeconomic-powerbi-public/
 
 ## Pontos Fortes
 
-- Dados de fonte oficial (IBGE PNAD Contínua 2019–2023) — reproduzíveis via API
-- Star schema limpo: `fato_indicadores` + `dim_uf` + `dim_periodo` + `dim_area` + `dim_renda`
-- Score de Oportunidade composto: `(1 - penetração) × população × IDH` — prioriza estados com gap real
-- 4 abas no dashboard: Nacional, Urbano/Rural, Socioeconômico, Oportunidade
-- DAX avançado: CAGR via `DIVIDE(POWER(...), 1)`, Gap Digital por UF com `RANKX`
+- Dado observado do IBGE (PNAD Contínua 2016–2025), reproduzível via API do SIDRA e
+  conferido contra o release publicado: 92,6% aqui contra 92,5% do IBGE em 2023
+- Star schema com dois fatos em grãos diferentes — `fato_indicadores` (UF × ano) e
+  `fato_situacao` (urbano × rural, que só existe em Brasil e Grandes Regiões)
+- Score de Oportunidade declarado: 60% volume de domicílios sem acesso + 40% lacuna até
+  100%. Os pesos são escolha de modelagem e estão ditos na página de metodologia
+- 5 páginas: A brecha, Taxa ou volume, O que explica, Onde investir, Metodologia
+- DAX que reconstrói série com `REMOVEFILTERS` para rankings e correlação sobreviverem
+  à transição de contexto
 
 ---
 
@@ -86,13 +90,20 @@ Além disso, o que existia tinha problemas de fundo:
   nunca chegaram à tabela fato. Dimensão para a qual nada aponta é decoração.
 - **Atributos de UF duplicados no fato.** População, densidade e IDH estavam copiados
   para dentro de `fato_indicadores`, repetidos cinco vezes por estado. O IDH (censo 2010)
-  aparecia replicado em 2019–2023, fingindo uma série anual que não existe.
+  aparecia replicado ao longo da série, fingindo um valor anual que não existe.
 - **Recorte urbano × rural sintético.** O fallback offline produzia urbano e rural
   aplicando desvio fixo sobre o total (+5pp / −20pp), gerando um gap de exatamente
   25,0pp em **todos** os 27 estados, em todos os anos. Um indicador construído para não
   distinguir estado nenhum.
 - **README anunciava "Dados Reais IBGE"** enquanto a série 2019–2022 era retropolada a
-  partir da tendência nacional. Só 2023 é observado por estado.
+  partir da tendência nacional. Corrigido: a série 2016–2025 é observada ano a ano e por
+  estado, sem retropolação.
+- **O `.pbix` ficou para trás da própria migração.** Os CSVs, o ETL, o README e o sumário
+  passaram para o dado real do IBGE; o arquivo entregue continuou com o modelo antigo
+  (2019–2023, com 2020 — ano em que a PNAD não coletou o módulo — e Brasil em 87,4%).
+  Quem baixasse o `.pbix` receberia exatamente o dado que o README dizia ter sido
+  abandonado. Corrigido: modelo religado aos CSVs, `fato_situacao` criada e medidas
+  reescritas.
 - **`dim_regiao` criava um floco de neve** (fato → dim_uf → dim_regiao) sem ganho.
 
 ## O que foi feito
@@ -122,16 +133,16 @@ Reescrito reconstruindo a série com `REMOVEFILTERS(dim_uf)` + reaplicação da 
 cuidado aplicado à correlação e ao score de oportunidade.
 
 ### O dashboard
-`digital_divide_brasil.pbix` construído do zero: 5 páginas, 64 visuais, 26 medidas.
+`digital_divide_brasil.pbix` construído do zero: 5 páginas, 64 visuais, 29 medidas.
 A camada visual é gerada por **`tools/build_report.py`**, que reescreve
 `Report/definition/**` (formato PBIR) a partir de especificação declarativa.
 
 - **A brecha em números** — indicadores, leitura automática, evolução e penetração por UF.
-- **Taxa ou volume?** — o paradoxo: São Paulo é 3º em taxa e 1º em gente desconectada.
-- **O que explica o acesso** — IDH × penetração, com correlação (0,883) e R² (78%)
-  calculados em DAX.
+- **Taxa ou volume?** — o paradoxo: São Paulo é 5º em taxa e 1º em domicílios desconectados.
+- **O que explica o acesso** — IDH × penetração, com correlação (0,829) e R² (69%)
+  calculados em DAX, reagindo ao filtro de ano.
 - **Onde investir primeiro** — score de oportunidade e fila de prioridade.
-- **Metodologia e limites** — o que é observado, o que é retropolado, o que o painel não
+- **Metodologia e limites** — o que é observado, o que é estimado, o que o painel não
   autoriza concluir.
 
 Design deliberadamente distinto do telecom-powerbi-public: claro cor de papel, paleta
