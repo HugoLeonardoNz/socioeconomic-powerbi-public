@@ -505,6 +505,39 @@ def line(page: str, key: str, box, title: str, subtitle: str,
     )
 
 
+def grouped_bar(page: str, key: str, box, title: str, subtitle: str,
+                cat_entity: str, cat_prop: str, measures: list[str],
+                colors: list[str], *, vtype: str = "clusteredColumnChart",
+                labels: bool = True, start: float | None = None,
+                sort: dict | None = None) -> dict:
+    """Barras agrupadas com uma serie por MEDIDA (nao por coluna).
+
+    O `bar()` recebe uma medida so e resolve serie por coluna. Urbano x rural
+    sao duas medidas distintas — vem de [Situacao] filtrada dentro de cada uma,
+    porque o recorte vive numa tabela fato separada, com grao de regiao.
+    """
+    points = [
+        {"properties": {"fill": solid(c)}, "selector": {"metadata": f"{ENTITY_M}.{m}"}}
+        for m, c in zip(measures, colors)
+    ]
+    return visual(
+        page, key, vtype, box,
+        query=q(
+            {"Category": [column_field(cat_entity, cat_prop)],
+             "Y": [measure_field(m) for m in measures]},
+            sort or sort_by_measure(measures[0], "Descending"),
+        ),
+        objects={
+            "categoryAxis": axis_cat(categorical=True),
+            "valueAxis": axis_val(show=not labels, start=start),
+            "legend": legend("TopLeft", show=True),
+            "labels": data_labels(labels),
+            "dataPoint": points,
+        },
+        container=panel(title, subtitle),
+    )
+
+
 def table(page: str, key: str, box, title: str, subtitle: str, fields: list, *,
           totals: bool = False, sort: dict | None = None, font: int = 10) -> dict:
     projections = [
@@ -862,11 +895,18 @@ def page_explica() -> tuple[str, list]:
                   "o quanto do acesso o IDH sozinho prevê"))
 
     (xc, wc), (xd, wd) = split_x(1, 1)
-    v.append(bar(p, "regiao", (xc, r[1][0], wc, r[1][1]),
-                 "Penetração por região",
-                 "média dos estados de cada região",
-                 "dim_uf", "Região", "Penetração",
-                 points=category_colors("dim_uf", "Região", REGIAO)))
+    # Aqui havia "Penetração por região": cinco barras entre 93% e 96%, todas do
+    # mesmo tamanho a olho nu. Media de regiao deixou de discriminar quando a
+    # desigualdade entre estados fechou — que e' justamente a conclusao da pagina.
+    # No lugar entra o recorte que AINDA varia, e que o README chama de achado
+    # mais forte: 13,1pp no Norte contra 1,8pp no Centro-Oeste. As medidas
+    # existiam no modelo e nao apareciam em visual nenhum.
+    v.append(grouped_bar(p, "urb_rur", (xc, r[1][0], wc, r[1][1]),
+                         "Cidade × campo, por região",
+                         "% de domicílios com internet · a distância entre as duas barras é o que sobrou da brecha",
+                         "fato_situacao", "Local", ["Penetração Urbana", "Penetração Rural"],
+                         [TEAL, BRICK], labels=True,
+                         sort=sort_by_measure("Penetração Rural", "Ascending")))
 
     v.append(table(p, "detalhe", (xd, r[1][0], wd, r[1][1]),
                    "Estado a estado",
