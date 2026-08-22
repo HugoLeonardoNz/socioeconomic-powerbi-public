@@ -12,3 +12,7 @@ build/
 
 # backup que o build cria antes de reescrever o .pbix
 *.prebuild.pbix
+# Backups datados do modelo, feitos antes de reconstruir a camada visual.
+# Ficam locais: o .pbix versionado ja e a fonte, e binario duplicado no
+# historico pesa sem informar.
+*.bak.pbix
