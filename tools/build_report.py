@@ -874,7 +874,7 @@ def page_paradoxo() -> tuple[str, list]:
 def page_explica() -> tuple[str, list]:
     p = "explica"
     v = chrome(p, "O que explica o acesso",
-               "O IDH do estado sozinho explica 69% da variação de penetração que ainda existe entre as unidades da federação — e essa variação encolheu de 9,6pp de desvio em 2016 para 1,9pp em 2025.")
+               "O IDH do estado sozinho explica 69% da variação de penetração que ainda existe entre as unidades da federação — e essa variação encolheu tanto que os 26 pares vizinhos do ranking já não se distinguem dentro da margem de erro da PNAD.")
 
     r = split(3, 2)
     (xa, wa), (xb, wb) = split_x(2, 1)
@@ -908,11 +908,16 @@ def page_explica() -> tuple[str, list]:
                          [TEAL, BRICK], labels=True,
                          sort=sort_by_measure("Penetração Rural", "Ascending")))
 
+    # A coluna do intervalo nao e' enfeite estatistico: a PNAD e' AMOSTRA, e sem
+    # ela a tabela sugere que 92,8% e 93,1% sao estados diferentes. Sao 26 de 26
+    # pares vizinhos cujos intervalos se encostam — ordenar por essa coluna e
+    # chamar de ranking supoe uma precisao que a pesquisa nao promete.
     v.append(table(p, "detalhe", (xd, r[1][0], wd, r[1][1]),
                    "Estado a estado",
-                   "acesso, distância da média nacional e contexto socioeconômico",
-                   [("col", "dim_uf", "Estado"), ("col", "dim_uf", "Região"),
-                    ("mea", "Penetração"), ("mea", "Gap vs Brasil (pp)"), ("mea", "IDH Médio")],
+                   "acesso com intervalo de 95% · a PNAD é amostra, não censo",
+                   [("col", "dim_uf", "Estado"),
+                    ("mea", "Penetração"), ("mea", "Intervalo de Confiança"),
+                    ("mea", "Gap vs Brasil (pp)"), ("mea", "IDH Médio")],
                    sort=sort_by_measure("Penetração", "Ascending"), font=9))
     return "O que explica", v
 

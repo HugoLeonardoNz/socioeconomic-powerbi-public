@@ -85,6 +85,30 @@ O que é observado, o que é estimado e o que o painel **não** autoriza conclui
 
 ---
 
+### A PNAD é amostra, e o painel passou a dizer isso
+
+Toda estimativa deste painel vem de pesquisa amostral. Ordenar 27 estados por
+estimativa pontual esconde que **os 26 pares vizinhos do ranking por taxa não se
+distinguem a 95% de confiança** — o Distrito Federal, 1º com 97,4%, tem intervalo
+\[94,7 ; 100\], e São Paulo, 5º com 95,0%, tem \[93,9 ; 96,1\].
+
+O IBGE publica o coeficiente de variação de cada estimativa (variável 10629 do
+SIDRA) justamente para isso. Ele entra no modelo em `fato_indicadores` como
+`cv_pct`, `margem_pp`, `ic_inferior` e `ic_superior`, e as medidas
+`Margem de Erro (pp)` e `Intervalo de Confiança` o expõem no painel.
+
+O método, e o que ele não resolve, estão em
+[`data_prep/sidra.py`](data_prep/sidra.py) na função `margem_erro`: o IBGE publica
+o CV de cada contagem, não o da razão entre duas, e a correlação entre numerador e
+denominador não é publicada. A suposição adotada (denominador fixo) fica no meio
+dos dois extremos possíveis e erra para o lado conservador.
+
+**Consequência para a leitura:** o paradoxo taxa × volume fica mais forte, não mais
+fraco. O ranking por volume separa de verdade — 606 mil domicílios em SP contra
+445 mil em Minas em 2025 não é empate técnico. O ranking por taxa, entre vizinhos, é.
+
+---
+
 ## Honestidade sobre os dados
 
 Este é o ponto que separa um painel bonito de um painel confiável, então fica no topo e

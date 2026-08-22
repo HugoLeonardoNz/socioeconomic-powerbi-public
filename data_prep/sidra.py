@@ -74,6 +74,26 @@ FONTES = {
         anos="2016|2017|2018|2019|2021|2022|2023|2024|2025",
         descricao="Domicílios (total)",
     ),
+    # ââ Precisão da amostra ââââââââââââââââââââââââââââââââââââââââââââââââââ
+    # A PNAD Contínua é AMOSTRA, não censo. Publicar um ranking de 27 estados por
+    # estimativa pontual, sem dizer o quanto cada ponto pode se mover, é tratar
+    # pesquisa amostral como contagem. O IBGE publica o coeficiente de variação
+    # de toda estimativa justamente para isso — só que numa variável separada.
+    "cv_com_internet_2022_2025": dict(
+        agregado=9649, variavel=10629, extra="1704[59918]",
+        anos="2022|2023|2024|2025",
+        descricao="Coeficiente de variação — domicílios com internet",
+    ),
+    "cv_com_internet_2016_2021": dict(
+        agregado=7311, variavel=10629, extra="680[33214]",
+        anos="2016|2017|2018|2019|2021",
+        descricao="Coeficiente de variação — domicílios com internet",
+    ),
+    "cv_total_domicilios": dict(
+        agregado=7167, variavel=5123, extra="937[48455]",
+        anos="2016|2017|2018|2019|2021|2022|2023|2024|2025",
+        descricao="Coeficiente de variação — total de domicílios",
+    ),
 }
 
 
@@ -108,6 +128,41 @@ def _http_json(url: str, tentativas: int = 5) -> list:
             if i < tentativas - 1:
                 time.sleep(2 * (i + 1))
     raise SidraIndisponivel(f"{url[:110]} :: {ultimo}")
+
+
+# Z de 95% numa normal. A PNAD tem amostra grande o bastante em todo grao que
+# este projeto usa para a aproximacao normal valer.
+Z95 = 1.96
+
+
+def margem_erro(pct: float, cv_numerador: float | None) -> float | None:
+    """Metade do intervalo de 95% da PENETRACAO, em pontos percentuais.
+
+    O IBGE publica o coeficiente de variacao de cada CONTAGEM, nao da razao
+    entre duas. Para p = X/N, com X contido em N e as duas estimadas da mesma
+    amostra:
+
+        CV²(p) = CV²(X) + CV²(N) - 2ρ·CV(X)·CV(N)
+
+    E o ρ nao e publicado. Os dois extremos limitam a resposta:
+
+      ρ = 0  (independentes)  -> CV(p) = √(CV²X + CV²N), MAIOR que qualquer um
+                                  dos dois. Falso: X e parte de N, sobem juntos.
+      ρ = 1  (perfeita)       -> CV(p) = |CV(X) - CV(N)|, quase zero. Otimista
+                                  demais para assumir sem poder conferir.
+
+    Aqui fica o meio: trata o denominador como fixo, entao CV(p) = CV(X). E a
+    pratica comum quando so o CV do numerador esta a mao, e erra para o lado
+    CONSERVADOR - o intervalo sai mais largo que o real, porque ignora a
+    correlacao positiva que reduz a variancia da razao.
+
+    Escolha declarada de proposito: intervalo largo demais faz o portfolio
+    afirmar menos do que poderia; intervalo estreito demais o faz afirmar o que
+    o dado nao sustenta. Entre os dois erros, o primeiro e o barato.
+    """
+    if cv_numerador is None:
+        return None
+    return round(Z95 * (cv_numerador / 100.0) * pct, 2)
 
 
 def _url(fonte: dict) -> str:
@@ -188,12 +243,19 @@ def carregar(forcar: bool = False) -> list[dict]:
     com.update(_achatar(bruto["com_internet_2022_2025"]))
     total = _achatar(bruto["total_domicilios"])
 
+    cv_com = _achatar(bruto["cv_com_internet_2016_2021"])
+    cv_com.update(_achatar(bruto["cv_com_internet_2022_2025"]))
+    cv_total = _achatar(bruto["cv_total_domicilios"])
+
     linhas = []
     for chave, valor_com in sorted(com.items()):
         valor_total = total.get(chave)
         if not valor_total:
             continue
         nivel, loc, situacao, ano = chave
+        pct = valor_com / valor_total * 100
+        cv = cv_com.get(chave)
+        margem = margem_erro(pct, cv)
         linhas.append({
             "nivel":        nivel,
             "codigo_ibge":  loc,
@@ -201,7 +263,14 @@ def carregar(forcar: bool = False) -> list[dict]:
             "ano":          ano,
             "com_internet": valor_com,
             "total":        valor_total,
-            "pct":          round(valor_com / valor_total * 100, 1),
+            "pct":          round(pct, 1),
+            # Precisao da amostra. `cv_*` sao os publicados pelo IBGE; `margem`
+            # e a metade do intervalo de 95%, em pontos percentuais.
+            "cv_com":       cv,
+            "cv_total":     cv_total.get(chave),
+            "margem_pp":    margem,
+            "ic_inf":       None if margem is None else round(max(pct - margem, 0.0), 1),
+            "ic_sup":       None if margem is None else round(min(pct + margem, 100.0), 1),
         })
     if not linhas:
         raise SidraIndisponivel("nenhuma linha cruzou numerador e denominador")

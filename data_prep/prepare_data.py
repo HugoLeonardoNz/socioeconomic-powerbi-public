@@ -187,6 +187,14 @@ def build_fato(
             "domicilios_com_internet":  row["com_internet"],
             "domicilios_total":         row["total"],
             "domicilios_sem_internet":  round(row["total"] - row["com_internet"], 1),
+            # Precisao da amostra. A PNAD e pesquisa amostral, e um ranking de 27
+            # estados por estimativa pontual esconde que estados vizinhos podem
+            # nao se distinguir. `margem_pp` e a metade do intervalo de 95%; o
+            # metodo e a suposicao (denominador fixo) estao em sidra.margem_erro.
+            "cv_pct":                   row.get("cv_com"),
+            "margem_pp":                row.get("margem_pp"),
+            "ic_inferior":              row.get("ic_inf"),
+            "ic_superior":              row.get("ic_sup"),
         })
 
     fato = pd.DataFrame(linhas).sort_values(["id_uf", "id_periodo"]).reset_index(drop=True)
