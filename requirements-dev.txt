@@ -1,0 +1,3 @@
+# Ambiente completo: preparacao do dado + testes dos numeros publicados.
+-r requirements.txt
+pytest>=8.0.0

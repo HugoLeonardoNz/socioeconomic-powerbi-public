@@ -3,10 +3,11 @@
 <div align="center">
 
 ![Power BI](https://img.shields.io/badge/Power%20BI-Desktop-F2C811?style=for-the-badge&logo=powerbi&logoColor=black)
-![DAX](https://img.shields.io/badge/DAX-29%20medidas-F2C811?style=for-the-badge)
+![DAX](https://img.shields.io/badge/DAX-23%20medidas-F2C811?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-ETL%20%2B%20report%20as%20code-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Star Schema](https://img.shields.io/badge/Modelo-Star%20Schema-8B5CF6?style=for-the-badge)
 ![Dados](https://img.shields.io/badge/Dados-IBGE%20PNAD%20observado%202016--2025-0F5F52?style=for-the-badge)
+![testes](https://github.com/HugoLeonardoNz/socioeconomic-powerbi-public/actions/workflows/tests.yml/badge.svg)
 
 **Onde está a população brasileira sem internet — e por que o ranking por percentual
 aponta para o lugar errado.**
@@ -39,7 +40,7 @@ o segundo ranking atende o país inteiro em percentual e quase ninguém em gente
 
 **O segundo achado é maior que o primeiro: a brecha entre estados praticamente fechou.**
 O desvio-padrão da penetração entre as 27 unidades caiu de **9,6pp em 2016 para 1,9pp em
-2025**, e a distância entre o melhor e o pior estado, de 21,3pp para 7,7pp. O gap entre
+2025**, e a distância entre o melhor e o pior estado, de 41,4pp para 7,7pp. O gap entre
 Norte+Nordeste e Sul+Sudeste é de **2,8pp** — era 4,6pp em 2023.
 
 O que restou é a distância entre a cidade e o campo: **7,8pp no Brasil**, e **13,1pp no

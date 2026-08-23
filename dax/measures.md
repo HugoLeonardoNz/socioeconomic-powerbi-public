@@ -1,6 +1,6 @@
 # Medidas DAX — Brecha Digital
 
-26 medidas na tabela `_Medidas`, agrupadas em pastas numeradas por domínio. **O modelo é
+23 medidas na tabela `_Medidas`, agrupadas em pastas numeradas por domínio. **O modelo é
 a fonte da verdade**; se este documento divergir dele, o modelo está certo.
 
 ```
