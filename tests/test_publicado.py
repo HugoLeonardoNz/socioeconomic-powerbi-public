@@ -269,3 +269,48 @@ def test_badge_do_readme_bate_com_o_documento():
     readme = (RAIZ / "README.md").read_text(encoding="utf-8")
     n = len(_medidas_documentadas())
     assert f"DAX-{n}%20medidas" in readme
+
+
+def test_os_dois_intervalos_citados_no_readme_batem_com_o_modelo(ultimo):
+    """O parágrafo do IC cita DF e SP com número exato — e ficou para trás.
+
+    POR QUE ESTE TESTE EXISTE
+    -------------------------
+    Na migração da série para 2025, a TABELA do README foi atualizada e o
+    parágrafo sobre intervalo de confiança, quarenta linhas abaixo, não. O
+    README publicava São Paulo com 96,6% na tabela e 95,0% no parágrafo — e
+    95,0% é a taxa do BRASIL, colada por engano. O DF aparecia com 97,4%
+    quando o modelo diz 98,3%.
+
+    O teste que já existia conferia que os 26 pares se sobrepõem (e isso
+    continuava verdadeiro), mas nenhum conferia os dois números citados. Foi
+    exatamente por essa fresta que o erro passou.
+    """
+    import re
+
+    md = (RAIZ / "README.md").read_text(encoding="utf-8")
+    trecho = md[md.index("não se\ndistinguem a 95%"):][:400]
+
+    ordenado = ultimo.sort_values("pct_domicilios_internet", ascending=False).reset_index(drop=True)
+    df = ordenado.iloc[0]
+    sp = ordenado[ordenado["sigla"] == "SP"].iloc[0]
+    pos_sp = ordenado.index[ordenado["sigla"] == "SP"][0] + 1
+
+    assert df["sigla"] == "DF", "o 1º do ranking deixou de ser o DF"
+    assert pos_sp == 5, f"São Paulo não é mais o 5º, e sim o {pos_sp}º"
+
+    def br(v):
+        return f"{v:.1f}".replace(".", ",")
+
+    for esperado in (br(df["pct_domicilios_internet"]), br(sp["pct_domicilios_internet"]),
+                     br(df["ic_inferior"]), br(sp["ic_inferior"]), br(sp["ic_superior"])):
+        assert esperado in trecho, (
+            f"o parágrafo do IC não cita {esperado}% — texto e modelo divergiram de novo"
+        )
+
+    # e o número do Brasil não pode reaparecer ali como se fosse de um estado
+    brasil = re.search(r"^([0-9]{2},[0-9])% dos domicílios brasileiros", md, re.M)
+    if brasil:
+        assert f"São Paulo, 5º com {brasil.group(1)}%" not in trecho, (
+            "a taxa do Brasil voltou a ser citada como se fosse a de São Paulo"
+        )

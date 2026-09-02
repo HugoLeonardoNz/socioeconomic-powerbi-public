@@ -92,8 +92,8 @@ O que é observado, o que é estimado e o que o painel **não** autoriza conclui
 
 Toda estimativa deste painel vem de pesquisa amostral. Ordenar 27 estados por
 estimativa pontual esconde que **os 26 pares vizinhos do ranking por taxa não se
-distinguem a 95% de confiança** — o Distrito Federal, 1º com 97,4%, tem intervalo
-\[94,7 ; 100\], e São Paulo, 5º com 95,0%, tem \[93,9 ; 96,1\].
+distinguem a 95% de confiança** — o Distrito Federal, 1º com 98,3%, tem intervalo
+\[95,8 ; 100,0\], e São Paulo, 5º com 96,6%, tem \[95,4 ; 97,7\].
 
 O IBGE publica o coeficiente de variação de cada estimativa (variável 10629 do
 SIDRA) justamente para isso. Ele entra no modelo em `fato_indicadores` como
