@@ -112,7 +112,7 @@ def _http_json(url: str, tentativas: int = 5) -> list:
     for i in range(tentativas):
         try:
             req = urllib.request.Request(url, headers={
-                "User-Agent": "portfolio-hugo-leonardo/1.0",
+                "User-Agent": "portfolio-hugo-nazario/1.0",
                 "Accept-Encoding": "gzip",
             })
             with urllib.request.urlopen(req, timeout=60) as r:
