@@ -23,11 +23,7 @@ Output (data/processed/):
     dim_regiao.csv
 """
 
-import os
-import json
-import requests
 import pandas as pd
-import numpy as np
 from pathlib import Path
 
 RAW_DIR = Path(__file__).parent.parent / "data" / "raw"
