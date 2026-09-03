@@ -14,7 +14,7 @@ aponta para o lugar errado.**
 
 </div>
 
-> Peça do portfólio de **Hugo Nazário**, Analista de Dados — cada projeto, com o contexto de por que foi feito, está em **[hugoleonardonz.github.io/portfolio](https://hugoleonardonz.github.io/portfolio/)**.
+> Peça do portfólio de **Hugo Nazário**, Analista de Dados — cada projeto, com o contexto de por que foi feito, está em **[hugonazario.com](https://hugonazario.com/)**.
 
 **[▶ Ver relatório ao vivo](https://app.fabric.microsoft.com/view?r=eyJrIjoiZjYxZTZkY2YtYTJhNC00ZWU0LWEyNTktMTc0MzczMTExNGQwIiwidCI6IjA5NGFkODdhLTAzNDMtNGU3OC05NmIzLTE2OGI4ZTVmMjgzMSJ9)** —
 sem instalar nada, direto no navegador.
